@@ -16,13 +16,13 @@ namespace X13.PLC {
       root=new Topic(null, "/");
     }
     #region variables
+    private Topic _parent;
+    private string _name;
+    private string _path;
+    /// <summary>[0] - saved, [1] - local, [2] - disposed, [3] - disposed fin., [4] - config </summary>
+    private System.Collections.BitArray _flags;
     internal SortedList<string, Topic> _children;
     internal List<SubRec> _subRecords;
-    internal Topic _parent;
-    internal string _name;
-    internal string _path;
-    /// <summary>[0] - saved, [1] - local, [2] - disposed, [3] - disposed fin., [4] - config </summary>
-    internal System.Collections.BitArray _flags;
 
     internal VT _vt;
     internal PriDT _dt;
@@ -51,12 +51,14 @@ namespace X13.PLC {
 
     public Topic parent {
       get { return _parent; }
+      internal set { _parent=value; }
     }
     public string name {
       get { return _name; }
     }
     public string path {
       get { return _path; }
+      internal set { _path=value; }
     }
     public Type vType {
       get {
@@ -98,7 +100,7 @@ namespace X13.PLC {
     /// <summary>only for this instance</summary>
     public bool local { get { return _flags[1]; } set { _flags[1]=value; } }
     /// <summary>removed</summary>
-    public bool disposed { get { return _flags[2]; } }
+    public bool disposed { get { return _flags[2]; } internal set { _flags[2]=value; } }
     /// <summary>save value only in config file</summary>
     public bool config {
       get { return _flags[4]; }

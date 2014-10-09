@@ -207,7 +207,7 @@ namespace X13.PLC {
               }
             }
             foreach(var t1 in t.children) {
-              t1._parent=t;
+              t1.parent=t;
             }
             foreach(var t1 in t.all) {
               if(t1._subRecords!=null) {
@@ -219,7 +219,7 @@ namespace X13.PLC {
                   }
                 }
               }
-              t1._path=t1.parent==Topic.root?string.Concat("/", t1.name):string.Concat(t1.parent.path, "/", t1.name);
+              t1.path=t1.parent==Topic.root?string.Concat("/", t1.name):string.Concat(t1.parent.path, "/", t1.name);
               EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
             }
 
@@ -280,7 +280,7 @@ namespace X13.PLC {
           }
         }
         if(cmd.art==Perform.Art.remove || cmd.art==Perform.Art.move) {
-          cmd.src._flags[2]=true;
+          cmd.src.disposed=true;
           if(cmd.src.parent!=null) {
             cmd.src.parent._children.Remove(cmd.src.name);
           }
@@ -307,7 +307,7 @@ namespace X13.PLC {
           }
         }
         if(cmd.art==Perform.Art.changed || cmd.art==Perform.Art.create) {
-          if(cmd.src._o!=null && !cmd.src._flags[2]) {
+          if(cmd.src._o!=null && !cmd.src.disposed) {
             ITenant tt;
             Topic r;
             if(cmd.src._vt==Topic.VT.Ref && (r=cmd.src._o as Topic)!=null) {
@@ -321,9 +321,9 @@ namespace X13.PLC {
         if(cmd.art!=Perform.Art.set) {
           cmd.src.Publish(cmd);
         }
-        if(cmd.src._flags[2]) {
-          cmd.src._flags[3]=true;
-        }
+        //if(cmd.src.disposed) {
+        //  cmd.src._flags[3]=true;
+        //}
       }
       _prOp.Clear();
       _signFl=!_signFl;
@@ -336,7 +336,7 @@ namespace X13.PLC {
         }
         _prOp.Clear();
         foreach(var t in Topic.root.all) {
-          t._flags[2]=true;
+          t.disposed=true;
           if(t._children!=null) {
             t._children.Clear();
             t._children=null;
@@ -344,7 +344,7 @@ namespace X13.PLC {
         }
         _busyFlag=1;
       }
-      Topic.root._flags[2]=false;
+      Topic.root.disposed=false;
     }
     internal void DoCmd(Perform cmd) {
       _tcQueue.Enqueue(cmd);
