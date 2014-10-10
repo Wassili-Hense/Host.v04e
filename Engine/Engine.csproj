@@ -53,13 +53,22 @@
     <Compile Include="Properties\VersionInfo.cs" />
     <Compile Include="lib\crc16.cs" />
     <Compile Include="lib\Log.cs" />
+    <Compile Include="Server\ApiV04.cs" />
+    <Compile Include="Server\MessageV04.cs" />
+    <Compile Include="Server\Server.cs" />
+    <Compile Include="Server\Session.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\References\Jurassic\Jurassic.csproj">
       <Project>{2ce5502d-8710-4be3-9d90-201d526904b3}</Project>
       <Name>Jurassic</Name>
     </ProjectReference>
+    <ProjectReference Include="..\References\websocket-sharp\websocket-sharp.csproj">
+      <Project>{b357bac7-529e-4d81-a0d2-71041b19c8de}</Project>
+      <Name>websocket-sharp</Name>
+    </ProjectReference>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
