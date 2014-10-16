@@ -29,7 +29,8 @@ namespace X13.Server {
     }
 
     private Session(System.Net.IPEndPoint ep) {
-      Topic r=Topic.root.Get("/etc/HttpServer/clients");
+      _msgIdG=((new Random()).Next(2, 0x7FFFFD) & 0x7FFFFE);
+      Topic r=Topic.root.Get("/etc/connections");
       this.id = Guid.NewGuid().ToString();
       this.ip = ep.Address;
       int i=1;
@@ -59,6 +60,8 @@ namespace X13.Server {
     }
     private string _host;
     private Topic _owner;
+    private int _msgIdG;
+
     public readonly string id;
     public readonly System.Net.IPAddress ip;
     public string userName;
@@ -70,6 +73,15 @@ namespace X13.Server {
     public override string ToString() {
       return (string.IsNullOrEmpty(userName)?"anonymus":userName)+"@"+_host;
     }
+    public int GenMsgId() {
+      int id, old;
+      do {
+        old=_msgIdG;
+        id=old>0xFFFFFD?2:old+2;
+      } while(Interlocked.CompareExchange(ref _msgIdG, id, old)!=old);
+      return id;
+    }
+
     public void Dispose() {
       var o=Interlocked.Exchange(ref _owner, null);
       if(o!=null && !o.disposed) {

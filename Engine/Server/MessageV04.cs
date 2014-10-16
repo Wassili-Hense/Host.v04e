@@ -39,11 +39,14 @@ namespace X13.Server {
           }
           mid=(mid*64)+j;
         }
-        string[] payload;
-        if(msg.Length>pos) {
-          payload=msg.Substring(pos).Split('\x1E');
-        }
       }
+      string[] payload;
+      if(msg.Length>pos) {
+        payload=msg.Substring(pos).Split('\x1E');
+      } else {
+        payload=null;
+      }
+      m=new MessageV04(cmd, mid, payload);
 
       return m;
     }
@@ -71,9 +74,9 @@ namespace X13.Server {
         for(int i=0; i<payload.Length; i++) {
           if(i>0) {
             sb.Append('\x1E');
-            if(!string.IsNullOrEmpty(payload[i])) {
-              sb.Append(payload[i]);
-            }
+          }
+          if(!string.IsNullOrEmpty(payload[i])) {
+            sb.Append(payload[i]);
           }
         }
       }
