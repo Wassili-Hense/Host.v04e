@@ -12,11 +12,14 @@ namespace X13.Client {
     private WebSocket _ws;
     private int _msgIdG;
 
-    public Client() {
+
+    public Client(string url) {
+      this.url=url;
       _msgIdG=1+((new Random()).Next(1, 0x7FFFFD) & 0x7FFFFE);
     }
     public void Start() {
-      _ws=new WebSocket("ws://localhost:8080/api/v04");
+      
+      _ws=new WebSocket("ws://"+this.url+"/api/v04");
 #if DEBUG
       _ws.Log.Output=WsLog;
 #endif
@@ -29,7 +32,7 @@ namespace X13.Client {
 
     public void Stop() {
     }
-
+    public string url { get; private set; }
     public event Action<MessageV04> recv;
 
     private void _ws_OnOpen(object sender, EventArgs e) {

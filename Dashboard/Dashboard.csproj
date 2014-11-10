@@ -47,13 +47,25 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
+    <Reference Include="Xceed.Wpf.AvalonDock, Version=2.0.2000.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>external\Xceed.Wpf.AvalonDock.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Page Include="Dashboard.xaml">
+    <Compile Include="model\ItemViewModel.cs" />
+    <Compile Include="model\ViewModelBase.cs" />
+    <Compile Include="model\Workspace.cs" />
+    <Compile Include="ui\BlockView.cs" />
+    <Compile Include="ui\InspectorView.cs" />
+    <Compile Include="ui\LogramView.cs" />
+    <Compile Include="ui\PanesStyleSelector.cs" />
+    <Compile Include="ui\PanesTemplateSelector.cs" />
+    <Page Include="ui\MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -63,8 +75,9 @@
     </Compile>
     <Compile Include="Client\Client.cs" />
     <Compile Include="Client\MessageV04.cs" />
-    <Compile Include="Dashboard.xaml.cs">
-      <DependentUpon>Dashboard.xaml</DependentUpon>
+    <Compile Include="ui\ActiveDocumentConverter.cs" />
+    <Compile Include="ui\MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
@@ -98,6 +111,10 @@
       <Project>{b357bac7-529e-4d81-a0d2-71041b19c8de}</Project>
       <Name>websocket-sharp</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Content Include="external\Xceed.Wpf.AvalonDock.dll" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
