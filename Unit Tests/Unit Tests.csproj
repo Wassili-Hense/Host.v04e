@@ -43,6 +43,10 @@
   <ItemGroup>
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="Microsoft.VisualStudio.QualityTools.UnitTestFramework, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL" />
+    <Reference Include="NiL.JS, Version=1.1.627.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\NiL.JS.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -55,6 +59,7 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\UT_PI.cs" />
     <Compile Include="Engine\Topic_UT.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\Engine\Properties\VersionInfo.cs">
@@ -62,13 +67,9 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Engine\Engine.csproj">
-      <Project>{6db15175-a0e1-4781-96fe-d6417d4de10f}</Project>
-      <Name>Engine</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\References\Jurassic\Jurassic.csproj">
-      <Project>{2ce5502d-8710-4be3-9d90-201d526904b3}</Project>
-      <Name>Jurassic</Name>
+    <ProjectReference Include="..\Core\Core.csproj">
+      <Project>{32e4bc3a-9d2f-4f5a-ad16-39c80a418b5f}</Project>
+      <Name>Core</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />

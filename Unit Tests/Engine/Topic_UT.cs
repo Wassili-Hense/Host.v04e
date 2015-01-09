@@ -5,7 +5,7 @@ using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using X13.PLC;
 
-namespace X13 {
+namespace X13 {/*
   /// <summary>
   /// Zusammenfassungsbeschreibung für Topic_UT
   /// </summary>
@@ -586,5 +586,5 @@ namespace X13 {
     //[TestMethod] public void T01() { }
     //[TestMethod] public void T01() { }
     //[TestMethod] public void T01() { }
-  }
+  }*/
 }
