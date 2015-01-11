@@ -1,4 +1,5 @@
-﻿using NiL.JS.Core;
+﻿using NiL.JS;
+using NiL.JS.Core;
 using NiL.JS.Core.Modules;
 using NiL.JS.Core.TypeProxing;
 using System;
@@ -104,10 +105,72 @@ namespace X13.PLC {
     internal int layer;
     internal PiBlock[] calcPath;
     internal SortedList<string, PiVar> _pins;
+    private NiL.JS.Core.BaseTypes.Function _calcFunc;
 
+    public PiBlock(string proto) {
+      var script = new Script("function calc(){ this.Q=this.A + 1; }");
+      _calcFunc = script.Context.GetVariable("calc").Value as NiL.JS.Core.BaseTypes.Function;
+      _pins = new SortedList<string, PiVar>();
+      calcPath = new PiBlock[] { this };
+    }
     public Topic owner {
       get { return _owner; }
-      set { _owner=value; }
+      set {
+        if (_owner == value) {
+          return;
+        }
+        if (_owner != null) {
+        }
+        _owner=value;
+        if (_owner != null) {
+          _owner.children.changed += children_changed;
+        }
+      }
+    }
+
+    private void children_changed(Topic src, Perform p) {
+      if (src.name == "$INF") {
+        return;
+      }
+      if (p.art == Perform.Art.create || p.art == Perform.Art.subscribe) {
+        if (!_pins.ContainsKey(src.name)) {
+          var pin = PLC.instance.GetVar(src, true);
+          if (src.name == "Q") {
+            pin.op = true;
+          }
+          pin.block = this;
+          _pins.Add(src.name, pin);
+          if (_pins.Count == 1) {
+            PLC.instance.AddBlock(this);
+          }
+        }
+      }
+      if (p.art == Perform.Art.changed || p.art == Perform.Art.subscribe) {
+        PiVar v;
+        if (_pins.TryGetValue(src.name, out v) && (v.ip || p.art == Perform.Art.subscribe) && p.prim != PLC.instance.sign) {
+          Calculate();
+        }
+      }
+    }
+    private void Calculate() {
+      _calcFunc.Invoke(this, null);
+    }
+    protected override JSObject GetMember(JSObject name, bool forWrite, bool own) {
+      if (_owner == null) {
+        return JSObject.Undefined;
+      }
+      Topic r = _owner.Get(name.ToString(), forWrite, _owner);
+      if (r == null) {
+        return JSObject.Undefined;
+      }
+      return (JSObject)r.value;
+    }
+    protected override void SetMember(JSObject name, JSObject value, bool strict) {
+      if (_owner == null) {
+        return;
+      }
+      Topic r = _owner.Get(name.ToString(), true, _owner);
+      r.Set(value, _owner);
     }
 
     public int CompareTo(PiBlock other) {
