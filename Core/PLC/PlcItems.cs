@@ -9,8 +9,11 @@ using System.Linq;
 using System.Text;
 
 namespace X13.PLC {
-  internal class PiVar {
-    public Topic owner;
+  public interface PlcItem : ITenant {
+  }
+
+  internal class PiVar : IDisposable {
+    public readonly Topic owner;
 
     public bool ip;
     public bool op;
@@ -20,18 +23,41 @@ namespace X13.PLC {
     public List<PiLink> links;
 
     public PiVar(Topic src) {
-      this.owner = src;
+      owner = src;
       links=new List<PiLink>();
       layer=0;
+      owner.changed+=owner_changed;
+    }
+
+    private void owner_changed(Topic src, Perform p) {
+      if(p.art==Perform.Art.remove) {
+        for(int i=links.Count-1; i>=0; i--) {
+          links[i].Del();
+        }
+        PLC.instance.DelPin(this);
+      } else if(p.art==Perform.Art.changed) {
+        for(int i=links.Count-1; i>=0; i--) {
+          if(links[i].input==this) {
+            links[i].output.owner.Set(this.owner._value, links[i].owner);
+          }
+        }
+      }
     }
     public void AddLink(PiLink l) {
       links.Add(l);
     }
+    internal void DelLink(PiLink l) {
+      links.Remove(l);
+    }
     public override string ToString() {
       return string.Concat(owner.path, "[", this.ip?"I":" ", this.op?"O":" ", ", ", layer.ToString(), "]");
     }
+
+    public void Dispose() {
+
+    }
   }
-  public class PiAlias : CustomType, ITenant {
+  public class PiAlias : CustomType, PlcItem {
     private Topic _owner;
     public bool ip;
     public bool op;
@@ -47,7 +73,7 @@ namespace X13.PLC {
     }
   }
 
-  public class PiLink : CustomType, ITenant {
+  public class PiLink : CustomType, PlcItem {
     private Topic _owner;
     internal PiVar input;
     internal PiVar output;
@@ -84,8 +110,15 @@ namespace X13.PLC {
       [Hidden]
       get { return _owner; }
       [Hidden]
-      set { _owner=value; }
+      set {
+        _owner=value;
+        if(_owner == null) {
+          input.DelLink(this);
+          output.DelLink(this);
+        }
+      }
     }
+
     [DoNotEnumerate]
     public JSObject toJSON(JSObject obj) {
       var r=JSObject.CreateObject();
@@ -99,8 +132,14 @@ namespace X13.PLC {
     public override string ToString() {
       return string.Concat(input.owner.path," - ", output.owner.path);
     }
+
+    internal void Del() {
+      input.DelLink(this);
+      output.DelLink(this);
+      owner.Remove(owner);
+    }
   }
-  public class PiBlock : CustomType, ITenant, IComparable<PiBlock> {
+  public class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
     private Topic _owner;
     internal int layer;
     internal PiBlock[] calcPath;
@@ -163,7 +202,7 @@ namespace X13.PLC {
       if (r == null) {
         return JSObject.Undefined;
       }
-      return (JSObject)r.value;
+      return r._value;
     }
     protected override void SetMember(JSObject name, JSObject value, bool strict) {
       if (_owner == null) {

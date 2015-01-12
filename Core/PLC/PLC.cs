@@ -45,7 +45,6 @@ namespace X13.PLC {
       _sign2.local = true;
       _sign2.saved = false;
     }
-
     public void Start() {
     }
     public void Stop() {
@@ -57,159 +56,21 @@ namespace X13.PLC {
       if (Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
         return;
       }
-      Perform c;
-      Action<Topic, Perform> func;
-      Topic t;
-      while (_tcQueue.TryDequeue(out c)) {
-        if (c == null || c.src == null) {
+      Perform cmd;
+      _pfPos = 0;
+      while (_tcQueue.TryDequeue(out cmd)) {
+        if (cmd == null || cmd.src == null) {
           continue;
         }
-        switch (c.art) {
-        case Perform.Art.create:
-          if ((t = c.src.parent) != null) {
-            if (t._subRecords != null) {
-              foreach (var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
-                c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
-              }
-            }
-            while (t != null) {
-              if (t._subRecords != null) {
-                foreach (var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskAll)) {
-                  c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
-                }
-              }
-              t = t.parent;
-            }
-          }
-          EnquePerf(c);
-          break;
-        case Perform.Art.subscribe:
-        case Perform.Art.unsubscribe:
-          if ((func = c.o as Action<Topic, Perform>) != null) {
-            if (c.i == 0) {
-              if (c.art == Perform.Art.subscribe) {
-                c.src.Subscribe(new Topic.SubRec() { mask = c.src.path, ma = Topic.Bill.curArr, f = func });
-              } else {
-                c.src.Unsubscribe(c.src.path, func);
-              }
-              goto case Perform.Art.set;
-            } else {
-              Topic.SubRec sr;
-              Topic.Bill b;
-              if (c.i == 1) {
-                sr = new Topic.SubRec() { mask = c.prim.path + "/+", ma = Topic.Bill.curArr, f = func };
-                if (c.art == Perform.Art.subscribe) {
-                  c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = Topic.Bill.childrenArr, f = func });
-                } else {
-                  c.src.Unsubscribe(sr.mask, func);
-                }
-                b = c.src.children;
-              } else {
-                sr = new Topic.SubRec() { mask = c.prim.path + "/#", ma = Topic.Bill.allArr, f = func };
-                b = c.src.all;
-              }
-              foreach (Topic tmp in b) {
-                if (c.art == Perform.Art.subscribe) {
-                  tmp.Subscribe(sr);
-                } else {
-                  c.src.Unsubscribe(sr.mask, func);
-                }
-                EnquePerf(Perform.Create(tmp, c.art, c.src));
-              }
-            }
-          }
-          break;
-
-        case Perform.Art.remove:
-          foreach (Topic tmp in c.src.all) {
-            EnquePerf(Perform.Create(tmp, c.art, c.prim));
-          }
-          break;
-        case Perform.Art.move:
-          if ((t = c.o as Topic) != null) {
-            string oPath = c.src.path;
-            string nPath = t.path;
-            t._children = c.src._children;
-            c.src._children = null;
-            t._value = c.src._value;
-            c.src._value = JSObject.Undefined;
-            if (c.src._subRecords != null) {
-              foreach (var sr in c.src._subRecords) {
-                if (sr.mask.StartsWith(oPath)) {
-                  t.Subscribe(new Topic.SubRec() { mask = sr.mask.Replace(oPath, nPath), ma = sr.ma, f = sr.f });
-                }
-              }
-            }
-            foreach (var t1 in t.children) {
-              t1.parent = t;
-            }
-            foreach (var t1 in t.all) {
-              if (t1._subRecords != null) {
-                for (int i = t1._subRecords.Count - 1; i >= 0; i--) {
-                  if (t1._subRecords[i].mask.StartsWith(oPath)) {
-                    t1._subRecords[i] = new Topic.SubRec() { mask = t1._subRecords[i].mask.Replace(oPath, nPath), ma = t1._subRecords[i].ma, f = t1._subRecords[i].f };
-                  } else if (!t1._subRecords[i].mask.StartsWith(nPath)) {
-                    t1._subRecords.RemoveAt(i);
-                  }
-                }
-              }
-              t1.path = t1.parent == Topic.root ? string.Concat("/", t1.name) : string.Concat(t1.parent.path, "/", t1.name);
-              EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
-            }
-
-            int idx = EnquePerf(c);
-            if (idx > 0) {
-              Perform c1 = _prOp[idx - 1];
-              if (c1.src == c.src && c1.art == Perform.Art.set) {
-                var p = Perform.Create(t, Perform.Art.set, c1.prim);
-                p.o = c1.o;
-                p.i = c1.i;
-                EnquePerf(p);
-              }
-            }
-          }
-          break;
-        case Perform.Art.changed:
-        case Perform.Art.set:
-        case Perform.Art.setJson:
-          EnquePerf(c);
-          break;
-        }
+        TickStep1(cmd);
       }
 
       for (_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
-        var cmd = _prOp[_pfPos];
-        if (cmd.art == Perform.Art.remove || cmd.art == Perform.Art.setJson || (cmd.art == Perform.Art.set && !object.Equals(cmd.src._value, cmd.o))) {
-          cmd.old_o = cmd.src._value;
-          if (cmd.art == Perform.Art.setJson) {
-            cmd.src._value = JSON.parse((string)cmd.o);
-          } else {
-            if(cmd.o is JSObject){
-              cmd.src._value=cmd.o as JSObject;
-            } else {
-              cmd.src._value.Assign(new JSObject(cmd.o));
-            }
-            cmd.src._json = null;
-          }
-          if (cmd.art != Perform.Art.remove) {
-            cmd.art = Perform.Art.changed;
-          }
-        }
-        if (cmd.art == Perform.Art.remove || cmd.art == Perform.Art.move) {
-          cmd.src.disposed = true;
-          if (cmd.src.parent != null) {
-            cmd.src.parent._children.Remove(cmd.src.name);
-          }
-        }
-        //TODO: save for undo/redo
-        /*IHistory h;
-        if(cmd.prim!=null && cmd.prim._vt==VT.Object && (h=cmd.prim._o as IHistory)!=null) {
-          h.Add(cmd);
-        }*/
+        TickStep2(_prOp[_pfPos]);
       }
 
       for (_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
-        var cmd = _prOp[_pfPos];
+        cmd = _prOp[_pfPos];
         if (cmd.art == Perform.Art.changed || cmd.art == Perform.Art.remove) {
           if (cmd.old_o != null) {
             ITenant it;
@@ -244,6 +105,151 @@ namespace X13.PLC {
       _signFl = !_signFl;
       _busyFlag = 1;
     }
+    private void TickStep1(Perform c) {
+      Action<Topic, Perform> func;
+      Topic t;
+      switch(c.art) {
+      case Perform.Art.create:
+        if((t = c.src.parent) != null) {
+          if(t._subRecords != null) {
+            foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
+              c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
+            }
+          }
+          while(t != null) {
+            if(t._subRecords != null) {
+              foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskAll)) {
+                c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
+              }
+            }
+            t = t.parent;
+          }
+        }
+        EnquePerf(c);
+        break;
+      case Perform.Art.subscribe:
+      case Perform.Art.unsubscribe:
+        if((func = c.o as Action<Topic, Perform>) != null) {
+          if(c.i == 0) {
+            if(c.art == Perform.Art.subscribe) {
+              c.src.Subscribe(new Topic.SubRec() { mask = c.src.path, ma = Topic.Bill.curArr, f = func });
+            } else {
+              c.src.Unsubscribe(c.src.path, func);
+            }
+            goto case Perform.Art.set;
+          } else {
+            Topic.SubRec sr;
+            Topic.Bill b;
+            if(c.i == 1) {
+              sr = new Topic.SubRec() { mask = c.prim.path + "/+", ma = Topic.Bill.curArr, f = func };
+              if(c.art == Perform.Art.subscribe) {
+                c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = Topic.Bill.childrenArr, f = func });
+              } else {
+                c.src.Unsubscribe(sr.mask, func);
+              }
+              b = c.src.children;
+            } else {
+              sr = new Topic.SubRec() { mask = c.prim.path + "/#", ma = Topic.Bill.allArr, f = func };
+              b = c.src.all;
+            }
+            foreach(Topic tmp in b) {
+              if(c.art == Perform.Art.subscribe) {
+                tmp.Subscribe(sr);
+              } else {
+                c.src.Unsubscribe(sr.mask, func);
+              }
+              EnquePerf(Perform.Create(tmp, c.art, c.src));
+            }
+          }
+        }
+        break;
+
+      case Perform.Art.remove:
+        foreach(Topic tmp in c.src.all) {
+          EnquePerf(Perform.Create(tmp, c.art, c.prim));
+        }
+        break;
+      case Perform.Art.move:
+        if((t = c.o as Topic) != null) {
+          string oPath = c.src.path;
+          string nPath = t.path;
+          t._children = c.src._children;
+          c.src._children = null;
+          t._value = c.src._value;
+          c.src._value = JSObject.Undefined;
+          if(c.src._subRecords != null) {
+            foreach(var sr in c.src._subRecords) {
+              if(sr.mask.StartsWith(oPath)) {
+                t.Subscribe(new Topic.SubRec() { mask = sr.mask.Replace(oPath, nPath), ma = sr.ma, f = sr.f });
+              }
+            }
+          }
+          foreach(var t1 in t.children) {
+            t1.parent = t;
+          }
+          foreach(var t1 in t.all) {
+            if(t1._subRecords != null) {
+              for(int i = t1._subRecords.Count - 1; i >= 0; i--) {
+                if(t1._subRecords[i].mask.StartsWith(oPath)) {
+                  t1._subRecords[i] = new Topic.SubRec() { mask = t1._subRecords[i].mask.Replace(oPath, nPath), ma = t1._subRecords[i].ma, f = t1._subRecords[i].f };
+                } else if(!t1._subRecords[i].mask.StartsWith(nPath)) {
+                  t1._subRecords.RemoveAt(i);
+                }
+              }
+            }
+            t1.path = t1.parent == Topic.root ? string.Concat("/", t1.name) : string.Concat(t1.parent.path, "/", t1.name);
+            EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
+          }
+
+          int idx = EnquePerf(c);
+          if(idx > 0) {
+            Perform c1 = _prOp[idx - 1];
+            if(c1.src == c.src && c1.art == Perform.Art.set) {
+              var p = Perform.Create(t, Perform.Art.set, c1.prim);
+              p.o = c1.o;
+              p.i = c1.i;
+              EnquePerf(p);
+            }
+          }
+        }
+        break;
+      case Perform.Art.changed:
+      case Perform.Art.set:
+      case Perform.Art.setJson:
+        EnquePerf(c);
+        break;
+      }
+    }
+    private void TickStep2(Perform cmd) {
+      if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.setJson || (cmd.art == Perform.Art.set && !object.Equals(cmd.src._value, cmd.o))) {
+        cmd.old_o = cmd.src._value;
+        if(cmd.art == Perform.Art.setJson) {
+          cmd.src._value = JSON.parse((string)cmd.o);
+        } else {
+          if(cmd.o is JSObject) {
+            cmd.src._value=cmd.o as JSObject;
+          } else {
+            cmd.src._value.Assign(new JSObject(cmd.o));
+          }
+          cmd.src._json = null;
+        }
+        if(cmd.art != Perform.Art.remove) {
+          cmd.art = Perform.Art.changed;
+        }
+      }
+      if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.move) {
+        cmd.src.disposed = true;
+        if(cmd.src.parent != null) {
+          cmd.src.parent._children.Remove(cmd.src.name);
+        }
+      }
+      //TODO: save for undo/redo
+      /*IHistory h;
+      if(cmd.prim!=null && cmd.prim._vt==VT.Object && (h=cmd.prim._o as IHistory)!=null) {
+        h.Add(cmd);
+      }*/
+    }
+
     internal void Clear() {
       lock (Topic.root) {
         Perform c;
@@ -262,7 +268,29 @@ namespace X13.PLC {
       Topic.root.disposed = false;
     }
     internal void DoCmd(Perform cmd) {
-      _tcQueue.Enqueue(cmd);
+      if(cmd.prim==null || (cmd.prim._value as PlcItem)==null) {
+        _tcQueue.Enqueue(cmd);
+      } else {
+        int idx = _prOp.BinarySearch(cmd);
+        if(idx < 0) {
+          idx = ~idx;
+          if(idx <= _pfPos) {
+            _tcQueue.Enqueue(cmd);               // Published in next tick
+            return;
+          }
+        } else {
+          if(idx >= _pfPos) {
+            _tcQueue.Enqueue(cmd);               // Published in next tick
+            return;
+          }
+          var oCmd = _prOp[idx];
+          if(oCmd.art == Perform.Art.changed) {
+            cmd.old_o = oCmd.old_o;
+          }
+        }
+        TickStep1(cmd);
+        TickStep2(cmd);
+      }
     }
 
     internal int EnquePerf(Perform cmd) {
@@ -279,41 +307,6 @@ namespace X13.PLC {
         }
       }
       return idx;
-    }
-    internal void DoPlcCmd(Perform cmd) {
-      if (object.Equals(cmd.src._value, cmd.o)) {
-        return;
-      }
-
-      int idx = _prOp.BinarySearch(cmd);
-      if (idx < 0) {
-        idx = ~idx;
-        if (idx <= _pfPos) {
-          cmd.art = Perform.Art.set;
-          cmd.prim = sign;
-          DoCmd(cmd);               // Published in next tick
-          return;
-        }
-        _prOp.Insert(idx, cmd);
-        cmd.src._json = null;
-        cmd.old_o = cmd.src._value;
-      } else {
-        if (idx >= _pfPos) {
-          cmd.art = Perform.Art.set;
-          cmd.prim = sign;
-          DoCmd(cmd);               // Published in next tick
-          return;
-        }
-        var oCmd = _prOp[idx];
-        if (oCmd.art == Perform.Art.changed) {
-          cmd.old_o = oCmd.old_o;
-        } else {
-          cmd.src._json = null;
-          cmd.old_o = cmd.src._value;
-        }
-        _prOp[idx] = cmd;
-      }
-      cmd.src._value = (JSObject)cmd.o;
     }
     internal void AddBlock(PiBlock bl) {
       _blocks.Add(bl);
@@ -386,5 +379,8 @@ namespace X13.PLC {
       } while (vQu.Count > 0);
     }
 
+    internal void DelPin(PiVar v) {
+      _vars.Remove(v.owner);
+    }
   }
 }

@@ -201,7 +201,7 @@ namespace X13 {/*
       A3.Set(val);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(val, A3.As<long>());
-      A3.Remove();
+      A3.Del();
       A3.Set(Math.PI);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(true, A3.disposed);
@@ -382,7 +382,7 @@ namespace X13 {/*
     public void T13() {
       var b1=root.Get("B1");
       X13.PLC.PLC.instance.Tick();
-      b1.Remove();
+      b1.Del();
       X13.PLC.PLC.instance.Tick();
       Assert.IsTrue(b1.disposed);
       Assert.IsFalse(root.Exist("B1"));
@@ -390,7 +390,7 @@ namespace X13 {/*
       var b2=root.Get("B2");
       var b2_a=b2.Get("A");
       X13.PLC.PLC.instance.Tick();
-      b2.Remove();
+      b2.Del();
       X13.PLC.PLC.instance.Tick();
       Assert.IsTrue(b2.disposed);
       Assert.IsFalse(root.Exist("B2"));
@@ -484,7 +484,7 @@ namespace X13 {/*
       Assert.AreEqual(Perform.Art.changed, cmds1[0].art);
       cmds1.Clear();
 
-      b1.Remove();
+      b1.Del();
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(null, a2.As<Topic>());
       Assert.AreEqual(15, a2.As<long>());

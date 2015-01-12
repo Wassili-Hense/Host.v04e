@@ -32,8 +32,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NiL.JS">
-      <HintPath>..\packages\NiL.JS.1.1.627.0\lib\net40\NiL.JS.dll</HintPath>
+    <Reference Include="NiL.JS, Version=1.2.661.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\bin\NiL.JS.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

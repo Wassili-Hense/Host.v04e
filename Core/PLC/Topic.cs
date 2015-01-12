@@ -186,7 +186,10 @@ namespace X13.PLC {
       return string.Compare(this._path, other._path);
     }
 
-    public object value { get { return (_value.ValueType==JSObjectType.Object && !(_value.Value is JSObject))?_value.Value:_value; } set { this.Set(value); } }
+    public object value { get { return (_value.ValueType>=JSObjectType.Object && !(_value.Value is JSObject))?_value.Value:_value; } set { this.Set(value); } }
+    public T As<T>() {
+      return _value.As<T>();
+    }
     public void Set(object val, Topic prim=null) {
       var c=Perform.Create(this, val, prim);
       PLC.instance.DoCmd(c);
