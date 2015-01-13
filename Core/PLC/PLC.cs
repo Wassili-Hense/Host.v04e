@@ -227,7 +227,23 @@ namespace X13.PLC {
       if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.setJson || (cmd.art == Perform.Art.set && !object.Equals(cmd.src._value, cmd.o))) {
         cmd.old_o = cmd.src._value;
         if(cmd.art == Perform.Art.setJson) {
-          cmd.src._value = JSON.parse((string)cmd.o);
+          var jso= JSON.parse((string)cmd.o);
+          JSObject ty;
+          if(jso.ValueType==JSObjectType.Object && (ty=jso.GetMember("$type")).IsDefinded) {
+            switch(ty.As<string>()) {
+            case "PiBlock":
+              cmd.src._value=new PiBlock(jso["func"].As<string>());
+              break;
+            case "PiLink":
+              cmd.src._value=new PiLink(cmd.src.Get(jso["i"].As<string>(), true, cmd.prim), cmd.src.Get(jso["o"].As<string>(), true, cmd.prim));
+              break;
+            default:
+              X13.lib.Log.Warning("{0}.setJson({1}) - unknown $type", cmd.src.path, cmd.o);
+              break;
+            }
+          } else {
+            cmd.src._value = jso;
+          }
         } else {
 
           switch(Type.GetTypeCode(cmd.o==null?null:cmd.o.GetType())) {
@@ -354,7 +370,7 @@ namespace X13.PLC {
     internal void AddBlock(PiBlock bl) {
       _blocks.Add(bl);
     }
-    internal PiVar GetVar(Topic t, bool create) {
+    internal PiVar GetVar(Topic t, bool create, bool refresh=false) {
       PiVar v;
       if(!_vars.TryGetValue(t, out v)) {
         if(create) {
@@ -364,6 +380,8 @@ namespace X13.PLC {
         } else {
           v = null;
         }
+      } else if(refresh) {
+        _rLayerVars.Add(v);
       }
       return v;
     }
@@ -375,7 +393,7 @@ namespace X13.PLC {
           v1 = vQu.Dequeue();
           if(v1.layer == 0) {
             v1.calcPath = new PiBlock[0];
-            if(v1.block != null && v1.block.layer == 0) {
+            if(v1.block != null && v1.block.layer == 0 && v1.op) {
               continue;
             }
             v1.layer = 1;
@@ -410,7 +428,7 @@ namespace X13.PLC {
           foreach(var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
             bl.calcPath = bl.calcPath.Union(ip.calcPath).ToArray();
           }
-          bl.layer = bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0).Max(z => z.layer) + 1;
+          bl.layer = bl._pins.Select(z => z.Value).Where(z => !z.op && z.layer > 0).Max(z => z.layer) + 1;
           foreach(var v3 in bl._pins.Select(z => z.Value).Where(z => z.op)) {
             v3.layer = bl.layer;
             v3.calcPath = bl.calcPath;

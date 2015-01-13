@@ -336,32 +336,49 @@ namespace UnitTests.Core {
       Assert.AreEqual(1, l1_v.output.layer);
       Assert.AreEqual(5, v2.As<int>());
       string json=l1_t.ToJson();
-      Assert.AreEqual("{\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
     }
     [TestMethod]
     public void T21() {
       var p = Topic.root.Get("/plc2");
-      var v1 = p.Get("v1");
-      v1.Set(3);
-      var v2 = p.Get("v2");
       var a1 = new PiBlock("ADD");
       var a1_t = p.Get("A01");
-      a1_t.value = a1;
       var a1_a = a1_t.Get("A");
-      var w1 = new PiLink(v1, a1_a);
-      var w1_t = p.Get("w001");
-      w1_t.value = w1;
       var a1_q_t=a1_t.Get("Q");
+      a1_t.value = a1;
+      a1_a.value=3;
       PLC.instance.Tick();
       PLC.instance.Tick();
-      Assert.AreEqual(1, w1.input.layer);
-      Assert.AreEqual(1, w1.output.layer);
       Assert.AreEqual(1, a1._pins["A"].layer);
       Assert.AreEqual(2, a1.layer);
       Assert.AreEqual(2, a1._pins["Q"].layer);
       Assert.AreEqual(4, a1_q_t.As<int>());
+      string json=a1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}", json);
     }
-
+    [TestMethod]
+    public void T22() {
+      var p = Topic.root.Get("/plc3");
+      var a1_t = p.Get("A01");
+      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
+      var a1_a = a1_t.Get("A");
+      var a1_q_t=a1_t.Get("Q");
+      var v1=p.Get("v1");
+      var v2=p.Get("v2");
+      var l1_t=p.Get("w001");
+      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc3/v1\",\"o\":\"/plc3/A01/A\"}");
+      var l2_t=p.Get("w002");
+      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc3/A01/Q\",\"o\":\"/plc3/v2\"}");
+      v1.value=28.3;
+      PLC.instance.Tick();
+      var a1=a1_t.As<PiBlock>();
+      PLC.instance.Tick();
+      Assert.AreEqual(1, a1._pins["A"].layer);
+      Assert.AreEqual(2, a1.layer);
+      Assert.AreEqual(2, a1._pins["Q"].layer);
+      PLC.instance.Tick();
+      //Assert.AreEqual(29.3, v2.As<double>());
+    }
 
   }
 }
