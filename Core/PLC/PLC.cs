@@ -38,6 +38,9 @@ namespace X13.PLC {
       _busyFlag = 1;
     }
     public void Init() {
+      if(Topic.root.children.Any()) {
+        this.Clear();
+      }
       _sign1 = Topic.root.Get("/etc/plugins/PLC/sign1");
       _sign1.local = true;
       _sign1.saved = false;
@@ -53,50 +56,50 @@ namespace X13.PLC {
     }
 
     internal void Tick() {
-      if (Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
+      if(Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
         return;
       }
       Perform cmd;
       _pfPos = 0;
-      while (_tcQueue.TryDequeue(out cmd)) {
-        if (cmd == null || cmd.src == null) {
+      while(_tcQueue.TryDequeue(out cmd)) {
+        if(cmd == null || cmd.src == null) {
           continue;
         }
         TickStep1(cmd);
       }
 
-      for (_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
+      for(_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
         TickStep2(_prOp[_pfPos]);
       }
 
-      for (_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
+      for(_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
         cmd = _prOp[_pfPos];
-        if (cmd.art == Perform.Art.changed || cmd.art == Perform.Art.remove) {
-          if (cmd.old_o != null) {
+        if(cmd.art == Perform.Art.changed || cmd.art == Perform.Art.remove) {
+          if(cmd.old_o != null) {
             ITenant it;
-            if ((it = cmd.old_o as ITenant) != null) {
+            if((it = cmd.old_o as ITenant) != null) {
               it.owner = null;
             }
           }
         }
-        if (cmd.art == Perform.Art.changed || cmd.art == Perform.Art.create) {
-          if (cmd.src._value != null && !cmd.src.disposed) {
+        if(cmd.art == Perform.Art.changed || cmd.art == Perform.Art.create) {
+          if(cmd.src._value != null && !cmd.src.disposed) {
             ITenant tt;
-            if ((tt = cmd.src._value as ITenant) != null) {
+            if((tt = cmd.src._value as ITenant) != null) {
               tt.owner = cmd.src;
             }
           }
         }
-        if (cmd.art != Perform.Art.set) {
+        if(cmd.art != Perform.Art.set) {
           cmd.src.Publish(cmd);
         }
         //if(cmd.src.disposed) {
         //  cmd.src._flags[3]=true;
         //}
       }
-      if (_rLayerVars.Any()) {
+      if(_rLayerVars.Any()) {
         CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => !z.ip)));
-        if (_rLayerVars.Any(z => z.layer == 0)) {
+        if(_rLayerVars.Any(z => z.layer == 0)) {
           CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer == 0)));
         }
         _rLayerVars.Clear();
@@ -226,10 +229,50 @@ namespace X13.PLC {
         if(cmd.art == Perform.Art.setJson) {
           cmd.src._value = JSON.parse((string)cmd.o);
         } else {
-          if(cmd.o is JSObject) {
-            cmd.src._value=cmd.o as JSObject;
-          } else {
-            cmd.src._value.Assign(new JSObject(cmd.o));
+
+          switch(Type.GetTypeCode(cmd.o==null?null:cmd.o.GetType())) {
+          case TypeCode.Boolean:
+            cmd.src._value=new NiL.JS.Core.BaseTypes.Boolean((bool)cmd.o);
+            break;
+          case TypeCode.Byte:
+          case TypeCode.SByte:
+          case TypeCode.Int16:
+          case TypeCode.Int32:
+          case TypeCode.UInt16:
+            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt32(cmd.o));
+            break;
+          case TypeCode.Int64:
+          case TypeCode.UInt32:
+          case TypeCode.UInt64:
+            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt64(cmd.o));
+            break;
+          case TypeCode.Single:
+          case TypeCode.Double:
+          case TypeCode.Decimal:
+            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToDouble(cmd.o));
+            break;
+          case TypeCode.DateTime: {
+              var dt = ((DateTime)cmd.o);
+              var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month, dt.Year, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
+              cmd.src._value=jdt.getTime();
+            }
+            break;
+          case TypeCode.Empty:
+            cmd.src._value=JSObject.Undefined;
+            break;
+          case TypeCode.String:
+            cmd.src._value=new NiL.JS.Core.BaseTypes.String((string)cmd.o);
+            break;
+          case TypeCode.Object:
+          default: {
+              JSObject jo;
+              if((jo = cmd.o as JSObject)!=null) {
+                cmd.src._value=jo;
+              } else {
+                cmd.src._value.Assign(new JSObject(cmd.o));
+              }
+            }
+            break;
           }
           cmd.src._json = null;
         }
@@ -250,15 +293,15 @@ namespace X13.PLC {
       }*/
     }
 
-    internal void Clear() {
-      lock (Topic.root) {
+    private void Clear() {
+      lock(Topic.root) {
         Perform c;
-        while (_tcQueue.TryDequeue(out c)) {
+        while(_tcQueue.TryDequeue(out c)) {
         }
         _prOp.Clear();
-        foreach (var t in Topic.root.all) {
+        foreach(var t in Topic.root.all) {
           t.disposed = true;
-          if (t._children != null) {
+          if(t._children != null) {
             t._children.Clear();
             t._children = null;
           }
@@ -293,14 +336,14 @@ namespace X13.PLC {
       }
     }
 
-    internal int EnquePerf(Perform cmd) {
+    private int EnquePerf(Perform cmd) {
       int idx = _prOp.BinarySearch(cmd);
-      if (idx < 0) {
+      if(idx < 0) {
         idx = ~idx;
         _prOp.Insert(idx, cmd);
       } else {
         var a1 = (int)_prOp[idx].art;
-        if (((int)cmd.art) >= a1) {
+        if(((int)cmd.art) >= a1) {
           _prOp[idx] = cmd;
         } else {
           idx = ~idx;
@@ -313,8 +356,8 @@ namespace X13.PLC {
     }
     internal PiVar GetVar(Topic t, bool create) {
       PiVar v;
-      if (!_vars.TryGetValue(t, out v)) {
-        if (create) {
+      if(!_vars.TryGetValue(t, out v)) {
+        if(create) {
           v = new PiVar(t);
           _vars[t] = v;
           _rLayerVars.Add(v);
@@ -328,58 +371,58 @@ namespace X13.PLC {
       PiVar v1;
 
       do {
-        while (vQu.Count > 0) {
+        while(vQu.Count > 0) {
           v1 = vQu.Dequeue();
-          if (v1.layer == 0) {
+          if(v1.layer == 0) {
             v1.calcPath = new PiBlock[0];
-            if (v1.block != null && v1.block.layer == 0) {
+            if(v1.block != null && v1.block.layer == 0) {
               continue;
             }
             v1.layer = 1;
           }
-          foreach (var l in v1.links.Where(z => z.input == v1)) {
+          foreach(var l in v1.links.Where(z => z.input == v1)) {
             l.layer = v1.layer;
             l.output.layer = l.layer;
             l.output.calcPath = v1.calcPath;
             vQu.Enqueue(l.output);
           }
-          if (v1.ip && v1.block != null) {
-            if (v1.calcPath.Contains(v1.block)) {
-              if (v1.layer > 0) {
+          if(v1.ip && v1.block != null) {
+            if(v1.calcPath.Contains(v1.block)) {
+              if(v1.layer > 0) {
                 v1.layer = -v1.layer;
               }
               X13.lib.Log.Debug("{0} make loop", v1.owner.path);
-            } else if (v1.block._pins.Where(z => z.Value.ip).All(z => z.Value.layer >= 0)) {
+            } else if(v1.block._pins.Where(z => z.Value.ip).All(z => z.Value.layer >= 0)) {
               v1.block.layer = v1.block._pins.Where(z => z.Value.ip).Max(z => z.Value.layer) + 1;
               v1.block.calcPath = v1.block.calcPath.Union(v1.calcPath).ToArray();
-              foreach (var v3 in v1.block._pins.Where(z => z.Value.op).Select(z => z.Value)) {
+              foreach(var v3 in v1.block._pins.Where(z => z.Value.op).Select(z => z.Value)) {
                 v3.layer = v1.block.layer;
                 v3.calcPath = v1.block.calcPath;
-                if (!vQu.Contains(v3)) {
+                if(!vQu.Contains(v3)) {
                   vQu.Enqueue(v3);
                 }
               }
             }
           }
         }
-        if (vQu.Count == 0 && _blocks.Any(z => z.layer == 0)) { // break a one loop in the graph
+        if(vQu.Count == 0 && _blocks.Any(z => z.layer == 0)) { // break a one loop in the graph
           var bl = _blocks.Where(z => z.layer <= 0).Min();
-          foreach (var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
+          foreach(var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
             bl.calcPath = bl.calcPath.Union(ip.calcPath).ToArray();
           }
           bl.layer = bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0).Max(z => z.layer) + 1;
-          foreach (var v3 in bl._pins.Select(z => z.Value).Where(z => z.op)) {
+          foreach(var v3 in bl._pins.Select(z => z.Value).Where(z => z.op)) {
             v3.layer = bl.layer;
             v3.calcPath = bl.calcPath;
-            if (!vQu.Contains(v3)) {
+            if(!vQu.Contains(v3)) {
               vQu.Enqueue(v3);
             }
           }
         }
-      } while (vQu.Count > 0);
+      } while(vQu.Count > 0);
     }
 
-    internal void DelPin(PiVar v) {
+    internal void DelVar(PiVar v) {
       _vars.Remove(v.owner);
     }
   }

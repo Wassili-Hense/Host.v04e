@@ -188,7 +188,13 @@ namespace X13.PLC {
 
     public object value { get { return (_value.ValueType>=JSObjectType.Object && !(_value.Value is JSObject))?_value.Value:_value; } set { this.Set(value); } }
     public T As<T>() {
-      return _value.As<T>();
+      try {
+        return _value.As<T>();
+      }
+      catch(Exception) {
+
+      }
+      return default(T);
     }
     public void Set(object val, Topic prim=null) {
       var c=Perform.Create(this, val, prim);

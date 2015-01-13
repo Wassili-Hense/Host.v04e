@@ -34,7 +34,7 @@ namespace X13.PLC {
         for(int i=links.Count-1; i>=0; i--) {
           links[i].Del();
         }
-        PLC.instance.DelPin(this);
+        PLC.instance.DelVar(this);
       } else if(p.art==Perform.Art.changed) {
         for(int i=links.Count-1; i>=0; i--) {
           if(links[i].input==this) {
@@ -140,6 +140,11 @@ namespace X13.PLC {
     }
   }
   public class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
+    private static NiL.JS.Core.BaseTypes.Function ctor;
+    static PiBlock() {
+      ctor= new Script("function Construct(){ return Function.apply(null, arguments); }").Context.GetVariable("Construct").Value as NiL.JS.Core.BaseTypes.Function;
+    }
+
     private Topic _owner;
     internal int layer;
     internal PiBlock[] calcPath;
@@ -147,8 +152,8 @@ namespace X13.PLC {
     private NiL.JS.Core.BaseTypes.Function _calcFunc;
 
     public PiBlock(string proto) {
-      var script = new Script("function calc(){ this.Q=this.A + 1; }");
-      _calcFunc = script.Context.GetVariable("calc").Value as NiL.JS.Core.BaseTypes.Function;
+      string body="this.Q=this.A + 1;";
+      _calcFunc = ctor.Invoke(new Arguments { body }) as NiL.JS.Core.BaseTypes.Function;
       _pins = new SortedList<string, PiVar>();
       calcPath = new PiBlock[] { this };
     }
