@@ -52,8 +52,8 @@ namespace X13.lib {
         if(_useConsole) {
           switch(ll) {
           case LogLevel.Debug:
-            Console.ForegroundColor=ConsoleColor.Gray;
-            Console.WriteLine(dts+"[D] "+msg);
+            //Console.ForegroundColor=ConsoleColor.Gray;
+            //Console.WriteLine(dts+"[D] "+msg);
             break;
           case LogLevel.Info:
             Console.ForegroundColor=ConsoleColor.White;

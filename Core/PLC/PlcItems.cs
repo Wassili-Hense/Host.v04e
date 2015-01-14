@@ -10,6 +10,7 @@ using System.Text;
 
 namespace X13.PLC {
   internal interface PlcItem : ITenant {
+    void changed(Topic src, Perform p);
   }
 
   internal class PiVar : IDisposable {
@@ -19,81 +20,146 @@ namespace X13.PLC {
     public bool op;
     public int layer;
     public PiBlock[] calcPath;
-    public PiBlock block;
-    public List<PiLink> links;
+    public List<PlcItem> _cont;
 
     public PiVar(Topic src) {
       owner = src;
-      links=new List<PiLink>();
+      _cont=new List<PlcItem>();
       layer=0;
       owner.changed+=owner_changed;
     }
 
     private void owner_changed(Topic src, Perform p) {
+      for(int i=_cont.Count-1; i>=0; i--) {
+        _cont[i].changed(src, p);
+      }
       if(p.art==Perform.Art.remove) {
-        for(int i=links.Count-1; i>=0; i--) {
-          links[i].Del();
-        }
         PLC.instance.DelVar(this);
-      } else if(p.art==Perform.Art.changed) {
-        for(int i=links.Count-1; i>=0; i--) {
-          if(links[i].input==this) {
-            links[i].output.owner.Set(this.owner._value, links[i].owner);
-          }
+      }
+    }
+    public void AddCont(PlcItem i) {
+      _cont.Add(i);
+      PiBlock b;
+      if((b= i as PiBlock)!=null) {
+        if(block!=null) {
+          block=b;
         }
       }
     }
-    public void AddLink(PiLink l) {
-      links.Add(l);
+    public void DelCont(PlcItem i) {
+      _cont.Remove(i);
+      if(block==i) {
+        block=null;
+      }
+      if(_cont.Count==0) {
+        PLC.instance.DelVar(this);
+      }
     }
-    internal void DelLink(PiLink l) {
-      links.Remove(l);
-    }
+    public PiBlock block { get; private set; }
     public override string ToString() {
       return string.Concat(owner.path, "[", this.ip?"I":" ", this.op?"O":" ", ", ", layer.ToString(), "]");
     }
-
     public void Dispose() {
 
     }
   }
   internal class PiAlias : CustomType, PlcItem {
     private Topic _owner;
+    private List<PiLink> links;
+
     public bool ip;
     public bool op;
-    internal PiVar alias;
-    internal List<PiLink> links;
-    public Topic owner {
-      get { return _owner; }
-      set { _owner=value; }
+    public PiVar origin;
+
+    public PiAlias(Topic tOrigin) {
+      origin=PLC.instance.GetVar(tOrigin, true);
+      links=new List<PiLink>();
     }
+    [Hidden]
     public void AddLink(PiLink l) {
       links.Add(l);
-      alias.links.Add(l);
+    }
+    [Hidden]
+    public void DelLink(PiLink l) {
+      links.Remove(l);
+    }
+
+    [DoNotEnumerate]
+    public JSObject toJSON(JSObject obj) {
+      var r=JSObject.CreateObject();
+      r["$type"]="PiAlias";
+      r["alias"]=origin.owner.path;
+      return r;
+    }
+
+    public Topic owner {
+      [Hidden]
+      get {
+        return _owner;
+      }
+      [Hidden]
+      set {
+        if(_owner!=null) {
+          _owner.changed-=_owner_changed;
+        }
+        _owner=value;
+        if(_owner == null) {
+          if(_owner!=null) {
+            _owner.changed-=_owner_changed;
+          }
+        }
+      }
+    }
+    [Hidden]
+    public void changed(Topic src, Perform p) {
+      if(p.art==Perform.Art.remove && _owner!=null) {
+        _owner.Remove(p.prim);
+      }
+    }
+    private void _owner_changed(Topic snd, Perform p) {
+      if(p.art==Perform.Art.remove) {
+        for(int i=links.Count-1; i>=0; i--) {
+          links[i].owner.Remove(p.prim);
+        }
+      }
     }
   }
 
   internal class PiLink : CustomType, PlcItem {
     private Topic _owner;
-    internal PiVar input;
-    internal PiVar output;
-    internal int layer;
+    private PiAlias ipAlias;
+    private PiAlias opAlias;
+    public PiVar input;
+    public PiVar output;
+    public int layer;
 
-    public PiLink(Topic ip, Topic op)
-      : this(PLC.instance.GetVar(ip, true), PLC.instance.GetVar(op, true)) {
-    }
-    internal PiLink(PiVar ip, PiVar op) {
-      base.ValueType=JSObjectType.Object;
-
-      input=ip;
-      input.op=true;
-      input.AddLink(this);
-      if(op.ip) {
-        throw new ArgumentException(string.Format("{0} already hat source", op.owner.path));
+    public PiLink(Topic ip, Topic op) {
+      if(ip.vType==typeof(PiAlias)) {
+        ipAlias=ip.As<PiAlias>();
+        input=ipAlias.origin;
+      } else {
+        input=PLC.instance.GetVar(ip, true);
       }
-      output=op;
+      input.op=true;
+      if(op.vType==typeof(PiAlias)) {
+        opAlias=op.As<PiAlias>();
+        output=opAlias.origin;
+      } else {
+        output=PLC.instance.GetVar(op, true);
+      }
+      if(output.ip) {
+        throw new ArgumentException(string.Format("{0} already hat source", op.path));
+      }
       output.ip=true;
-      output.AddLink(this);
+
+      if(ipAlias!=null) {
+        ipAlias.AddLink(this);
+      }
+      input.AddCont(this);
+      if(opAlias!=null) {
+        opAlias.AddLink(this);
+      }
+      output.AddCont(this);
     }
     [Hidden]
     public Topic owner {
@@ -103,28 +169,60 @@ namespace X13.PLC {
       set {
         _owner=value;
         if(_owner == null) {
-          input.DelLink(this);
-          output.DelLink(this);
+          if(ipAlias!=null) {
+            ipAlias.DelLink(this);
+          }
+          input.DelCont(this);
+          if(opAlias!=null) {
+            opAlias.DelLink(this);
+          }
+          output.DelCont(this);
         }
+      }
+    }
+    [Hidden]
+    public void changed(Topic src, Perform p) {
+      if(p.art==Perform.Art.remove && _owner!=null) {
+        _owner.Remove(p.prim);
+      } else if(p.art==Perform.Art.changed && src.vType==typeof(PiAlias)) {
+        if(src==input.owner) {
+          input.DelCont(this);
+          ipAlias=src.As<PiAlias>();
+          input=ipAlias.origin;
+          input.op=true;
+          ipAlias.AddLink(this);
+          input.AddCont(this);
+        } else if(src==output.owner) {
+          output.DelCont(this);
+          opAlias=src.As<PiAlias>();
+          output=opAlias.origin;
+          if(output.ip) {
+            throw new ArgumentException(string.Format("{0} already hat source", src.path));
+          }
+          output.ip=true;
+          opAlias.AddLink(this);
+          output.AddCont(this);
+        } else {
+          return;
+        }
+        if(input.layer!=0 || input.owner._value.IsDefinded) {
+          output.owner.Set(input.owner._value, p.prim);
+        }
+      } else if((p.art==Perform.Art.changed || p.art==Perform.Art.subscribe) && src==input.owner && (input.layer!=0 || input.owner._value.IsDefinded)) {
+        output.owner.Set(input.owner._value, p.prim);
       }
     }
     [DoNotEnumerate]
     public JSObject toJSON(JSObject obj) {
       var r=JSObject.CreateObject();
       r["$type"]="PiLink";
-      r["i"]=input.owner.path;
-      r["o"]=output.owner.path;
+      r["i"]=ipAlias!=null?ipAlias.owner.path:input.owner.path;
+      r["o"]=opAlias!=null?opAlias.owner.path:output.owner.path;
       return r;
     }
     [Hidden]
     public override string ToString() {
       return string.Concat(input.owner.path, " - ", output.owner.path);
-    }
-
-    internal void Del() {
-      input.DelLink(this);
-      output.DelLink(this);
-      owner.Remove(owner);
     }
   }
   internal class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
@@ -135,10 +233,11 @@ namespace X13.PLC {
 
     private Topic _owner;
     private string _funcName;
-    internal int layer;
-    internal PiBlock[] calcPath;
-    internal SortedList<string, PiVar> _pins;
     private NiL.JS.Core.BaseTypes.Function _calcFunc;
+
+    public int layer;
+    public PiBlock[] calcPath;
+    public SortedList<string, PiVar> _pins;
 
     public PiBlock(string func) {
       _funcName=func;
@@ -146,22 +245,6 @@ namespace X13.PLC {
       _calcFunc = ctor.Invoke(new Arguments { body }) as NiL.JS.Core.BaseTypes.Function;
       _pins = new SortedList<string, PiVar>();
       calcPath = new PiBlock[] { this };
-    }
-    public Topic owner {
-      [Hidden]
-      get { return _owner; }
-      [Hidden]
-      set {
-        if(_owner == value) {
-          return;
-        }
-        if(_owner != null) {
-        }
-        _owner=value;
-        if(_owner != null) {
-          _owner.children.changed += children_changed;
-        }
-      }
     }
 
     private void children_changed(Topic src, Perform p) {
@@ -176,7 +259,7 @@ namespace X13.PLC {
           } else if(src.name == "Q") {
             pin.op = true;
           }
-          pin.block = this;
+          pin.AddCont(this);
           _pins.Add(src.name, pin);
           if(_pins.Count == 1) {
             PLC.instance.AddBlock(this);
@@ -214,7 +297,7 @@ namespace X13.PLC {
       r.Set(value, _owner);
     }
     protected override IEnumerator<string> GetEnumeratorImpl(bool pdef) {
-      return _pins.OrderBy(z=>z.Key).OrderBy(z=>z.Value.layer).Select(z=>z.Key).GetEnumerator();
+      return _pins.OrderBy(z => z.Key).OrderBy(z => z.Value.layer).Select(z => z.Key).GetEnumerator();
     }
     [DoNotEnumerate]
     public JSObject toJSON(JSObject obj) {
@@ -224,14 +307,36 @@ namespace X13.PLC {
       return r;
     }
     [Hidden]
+    public override string ToString() {
+      return string.Concat(_owner==null?string.Empty:_owner.path, "[", _funcName, ", ", layer.ToString(), "]");
+    }
+    [Hidden]
     public int CompareTo(PiBlock other) {
       int l1=this.layer<=0?(this._pins.Select(z => z.Value).Where(z1 => z1.ip && z1.layer>0).Max(z2 => z2.layer)):this.layer;
       int l2=other==null?int.MaxValue:(other.layer<=0?(other._pins.Select(z => z.Value).Where(z1 => z1.ip && z1.layer>0).Max(z2 => z2.layer)):other.layer);
       return l1.CompareTo(l2);
     }
+
+    public Topic owner {
+      [Hidden]
+      get { return _owner; }
+      [Hidden]
+      set {
+        if(_owner == value) {
+          return;
+        }
+        if(_owner != null) {
+          _owner.children.changed -= children_changed;
+        }
+        _owner=value;
+        if(_owner != null) {
+          _owner.children.changed += children_changed;
+        }
+      }
+    }
     [Hidden]
-    public override string ToString() {
-      return string.Concat(_owner==null?string.Empty:_owner.path, "[", _funcName, ", ", layer.ToString(), "]");
+    public void changed(Topic src, Perform p) {
+
     }
   }
 }

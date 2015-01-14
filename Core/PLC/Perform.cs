@@ -69,7 +69,9 @@ namespace X13.PLC {
       }
       return _prio[((int)this.art)].CompareTo(_prio[(int)(other.art)]);
     }
-
+    public override string ToString() {
+      return string.Concat(src.path, "[", art.ToString(), ", ", o==null?"null":o.ToString(), "]");
+    }
     public enum Art {
       create=1,
       subscribe=2,

@@ -212,9 +212,9 @@ namespace X13.PLC {
         lock(this) {
           if(_json==null) {
             var t=_value.ValueType;
-            if(t==JSObjectType.NotExists || t==JSObjectType.NotExistsInObject || t==JSObjectType.Undefined){
+            if(t==JSObjectType.NotExists || t==JSObjectType.NotExistsInObject || t==JSObjectType.Undefined) {
               _json="null";
-            } else{
+            } else {
               _json=NiL.JS.Core.Modules.JSON.stringify(_value, null, null);
             }
           }
@@ -243,6 +243,7 @@ namespace X13.PLC {
       if(cmd.art==Perform.Art.subscribe && (func=cmd.o as Action<Topic, Perform>)!=null) {
         try {
           func(this, cmd);
+          Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
         }
         catch(Exception ex) {
           Log.Warning("{0}.{1}({2}, {4}) - {3}", func.Method.DeclaringType.Name, func.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
@@ -253,6 +254,7 @@ namespace X13.PLC {
             if((func=_subRecords[i].f)!=null && (_subRecords[i].ma.Length==0 || _subRecords[i].ma[0]==Bill.maskAll)) {
               try {
                 func(this, cmd);
+                Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
               }
               catch(Exception ex) {
                 Log.Warning("{0}.{1}({2}, {4}) - {3}", func.Method.DeclaringType.Name, func.Method.Name, this.path, ex.ToString(), cmd.art.ToString());

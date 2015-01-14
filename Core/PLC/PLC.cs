@@ -237,6 +237,9 @@ namespace X13.PLC {
             case "PiLink":
               cmd.src._value=new PiLink(cmd.src.Get(jso["i"].As<string>(), true, cmd.prim), cmd.src.Get(jso["o"].As<string>(), true, cmd.prim));
               break;
+            case "PiAlias":
+              cmd.src._value=new PiAlias(cmd.src.Get(jso["alias"].As<string>(), true, cmd.prim));
+              break;
             default:
               X13.lib.Log.Warning("{0}.setJson({1}) - unknown $type", cmd.src.path, cmd.o);
               break;
@@ -245,7 +248,6 @@ namespace X13.PLC {
             cmd.src._value = jso;
           }
         } else {
-
           switch(Type.GetTypeCode(cmd.o==null?null:cmd.o.GetType())) {
           case TypeCode.Boolean:
             cmd.src._value=new NiL.JS.Core.BaseTypes.Boolean((bool)cmd.o);
@@ -398,7 +400,7 @@ namespace X13.PLC {
             }
             v1.layer = 1;
           }
-          foreach(var l in v1.links.Where(z => z.input == v1)) {
+          foreach(var l in v1._cont.Select(z=>z as PiLink).Where(z => z!=null && z.input == v1)) {
             l.layer = v1.layer;
             l.output.layer = l.layer;
             l.output.calcPath = v1.calcPath;

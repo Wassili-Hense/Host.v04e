@@ -55,12 +55,9 @@ namespace UnitTests.Core {
       A1.Set(r.Next(1, int.MaxValue));
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(true, A1.As<bool>());
-      //A1.Set("false");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(false, A1.As<bool>());
-      //A1.Set("True");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(false, A1.As<bool>());
+      A1.Set("false");
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(true, A1.As<bool>());
     }
     [TestMethod]
     public void T05() {   // parse to long
@@ -71,18 +68,18 @@ namespace UnitTests.Core {
       A1.Set(25.7);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(25, A1.As<long>());
-      //A1.Set("94");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(94, A1.As<long>());
+      A1.Set("94");
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(94, A1.As<long>());
       A1.Set("0x15");
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(0, A1.As<long>());
-      //A1.Set("17.6");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(17, A1.As<long>());
-      //A1.Set(true);
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(1, A1.As<long>());
+      Assert.AreEqual(0x15, A1.As<long>());
+      A1.Set("17.6");
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(17, A1.As<long>());
+      A1.Set(true);
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(1, A1.As<long>());
       //A1.Set(new DateTime(917L));
       //X13.PLC.PLC.instance.Tick();
       //Assert.AreEqual(917, A1.As<long>());
@@ -96,18 +93,18 @@ namespace UnitTests.Core {
       A1.Set(52);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(52.0, A1.As<double>());
-      //A1.Set("913");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(913.0, A1.As<double>());
-      A1.Set("0x15");
+      A1.Set("913");
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(0.0, A1.As<double>());
-      //A1.Set("294.3187");
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(294.3187, A1.As<double>());
-      //A1.Set(true);
-      //X13.PLC.PLC.instance.Tick();
-      //Assert.AreEqual(1.0, A1.As<double>());
+      Assert.AreEqual(913.0, A1.As<double>());
+      A1.Set("0x23");
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(35.0, A1.As<double>());
+      A1.Set("294.3187");
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(294.3187, A1.As<double>());
+      A1.Set(true);
+      X13.PLC.PLC.instance.Tick();
+      Assert.AreEqual(1.0, A1.As<double>());
       //A1.Set(DateTime.FromOADate(1638.324));
       //X13.PLC.PLC.instance.Tick();
       //Assert.AreEqual(1638.324, A1.As<double>());
@@ -334,9 +331,10 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       Assert.AreEqual(1, l1_v.input.layer);
       Assert.AreEqual(1, l1_v.output.layer);
-      Assert.AreEqual(5, v2.As<int>());
       string json=l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
+      PLC.instance.Tick();
+      Assert.AreEqual(5, v2.As<int>());
     }
     [TestMethod]
     public void T21() {
@@ -358,17 +356,58 @@ namespace UnitTests.Core {
     }
     [TestMethod]
     public void T22() {
-      var p = Topic.root.Get("/plc3");
-      var a1_t = p.Get("A01");
-      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
-      var a1_a = a1_t.Get("A");
-      var a1_q_t=a1_t.Get("Q");
+      var p=Topic.root.Get("/plc22");
       var v1=p.Get("v1");
       var v2=p.Get("v2");
+      var k2_t=p.Get("v2_alias");
+      k2_t.value=new PiAlias(v2);
+      var l1_v=new PiLink(v1, k2_t);
       var l1_t=p.Get("w001");
-      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc3/v1\",\"o\":\"/plc3/A01/A\"}");
+      l1_t.value=l1_v;
+      v1.Set(42);
+      PLC.instance.Tick();
+      Assert.AreEqual(1, l1_v.input.layer);
+      Assert.AreEqual(1, l1_v.output.layer);
+      string json=k2_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc22/v2\"}", json);
+      json=l1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
+      PLC.instance.Tick();
+      Assert.AreEqual(42, v2.As<int>());
+    }
+    [TestMethod]
+    public void T23() {
+      var p=Topic.root.Get("/plc23");
+      var v1=p.Get("v1");
+      var v2=p.Get("v2");
+      var k1_t=p.Get("v1_alias");
+      k1_t.value=new PiAlias(v1);
+      var l1_v=new PiLink(k1_t, v2);
+      var l1_t=p.Get("w001");
+      l1_t.value=l1_v;
+      v1.Set(24);
+      PLC.instance.Tick();
+      Assert.AreEqual(1, l1_v.input.layer);
+      Assert.AreEqual(1, l1_v.output.layer);
+      string json=k1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc23/v1\"}", json);
+      json=l1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc23/v1_alias\",\"o\":\"/plc23/v2\"}", json);
+      PLC.instance.Tick();
+      Assert.AreEqual(24, v2.As<int>());
+    }
+    [TestMethod]
+    public void T24() {
+      var p = Topic.root.Get("/plc24");
+      var a1_t = p.Get("A01");
+      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
+      var v1=p.Get("v1");
+      var k1_t=p.Get("v1_alias");
+      k1_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v1\"}");
+      var l1_t=p.Get("w001");
+      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/v1_alias\",\"o\":\"/plc24/A01/A\"}");
       var l2_t=p.Get("w002");
-      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc3/A01/Q\",\"o\":\"/plc3/v2\"}");
+      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/A01/Q\",\"o\":\"/plc24/v2\"}");
       v1.value=28.3;
       PLC.instance.Tick();
       var a1=a1_t.As<PiBlock>();
@@ -377,7 +416,8 @@ namespace UnitTests.Core {
       Assert.AreEqual(2, a1.layer);
       Assert.AreEqual(2, a1._pins["Q"].layer);
       PLC.instance.Tick();
-      //Assert.AreEqual(29.3, v2.As<double>());
+      var v2=p.Get("v2");
+      Assert.AreEqual(29.3, v2.As<double>());
     }
 
   }
