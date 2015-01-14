@@ -400,7 +400,7 @@ namespace X13.PLC {
             }
             v1.layer = 1;
           }
-          foreach(var l in v1._cont.Select(z=>z as PiLink).Where(z => z!=null && z.input == v1)) {
+          foreach(var l in v1._cont.Select(z => z as PiLink).Where(z => z!=null && z.input == v1)) {
             l.layer = v1.layer;
             l.output.layer = l.layer;
             l.output.calcPath = v1.calcPath;

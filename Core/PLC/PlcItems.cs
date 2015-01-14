@@ -13,7 +13,7 @@ namespace X13.PLC {
     void changed(Topic src, Perform p);
   }
 
-  internal class PiVar : IDisposable {
+  internal class PiVar {
     public readonly Topic owner;
 
     public bool ip;
@@ -51,16 +51,17 @@ namespace X13.PLC {
       if(block==i) {
         block=null;
       }
+      if(!_cont.Any(z => z is PiLink && (z as PiLink).output==this)) {
+        ip=false;
+      }
       if(_cont.Count==0) {
+        owner.changed -= owner_changed;
         PLC.instance.DelVar(this);
       }
     }
     public PiBlock block { get; private set; }
     public override string ToString() {
-      return string.Concat(owner.path, "[", this.ip?"I":" ", this.op?"O":" ", ", ", layer.ToString(), "]");
-    }
-    public void Dispose() {
-
+      return string.Concat(owner.path, "[", this.ip ? "I" : " ", this.op ? "O" : " ", ", ", layer.ToString(), "]");
     }
   }
   internal class PiAlias : CustomType, PlcItem {
@@ -127,39 +128,15 @@ namespace X13.PLC {
 
   internal class PiLink : CustomType, PlcItem {
     private Topic _owner;
-    private PiAlias ipAlias;
-    private PiAlias opAlias;
+    private Topic _ipTopic;
+    private Topic _opTopic;
     public PiVar input;
     public PiVar output;
     public int layer;
 
     public PiLink(Topic ip, Topic op) {
-      if(ip.vType==typeof(PiAlias)) {
-        ipAlias=ip.As<PiAlias>();
-        input=ipAlias.origin;
-      } else {
-        input=PLC.instance.GetVar(ip, true);
-      }
-      input.op=true;
-      if(op.vType==typeof(PiAlias)) {
-        opAlias=op.As<PiAlias>();
-        output=opAlias.origin;
-      } else {
-        output=PLC.instance.GetVar(op, true);
-      }
-      if(output.ip) {
-        throw new ArgumentException(string.Format("{0} already hat source", op.path));
-      }
-      output.ip=true;
-
-      if(ipAlias!=null) {
-        ipAlias.AddLink(this);
-      }
-      input.AddCont(this);
-      if(opAlias!=null) {
-        opAlias.AddLink(this);
-      }
-      output.AddCont(this);
+      _ipTopic = ip;
+      _opTopic = op;
     }
     [Hidden]
     public Topic owner {
@@ -167,57 +144,92 @@ namespace X13.PLC {
       get { return _owner; }
       [Hidden]
       set {
-        _owner=value;
-        if(_owner == null) {
-          if(ipAlias!=null) {
-            ipAlias.DelLink(this);
+        if(_owner == value) {
+          return;
+        }
+        PiAlias al;
+        if(_owner != null) {
+          if((al = _ipTopic.As<PiAlias>()) != null) {
+            al.DelLink(this);
           }
           input.DelCont(this);
-          if(opAlias!=null) {
-            opAlias.DelLink(this);
+          if((al = _ipTopic.As<PiAlias>()) != null) {
+            al.DelLink(this);
           }
           output.DelCont(this);
+        }
+
+        _owner = value;
+
+        if(_owner != null) {
+          if((al = _ipTopic.As<PiAlias>()) != null) {
+            input = al.origin;
+            al.AddLink(this);
+          } else {
+            input = PLC.instance.GetVar(_ipTopic, true);
+          }
+          input.op = true;
+          if((al = _opTopic.As<PiAlias>()) != null) {
+            output = al.origin;
+            al.AddLink(this);
+          } else {
+            output = PLC.instance.GetVar(_opTopic, true);
+          }
+          if(output.ip) {
+            throw new ArgumentException(string.Format("{0} already hat source", _opTopic.path));
+          }
+          output.ip = true;
+
+          input.AddCont(this);
+          output.AddCont(this);
+          if(input.layer != 0 || input.owner._value.IsDefinded) {
+            output.owner.Set(input.owner._value, _owner);
+          }
         }
       }
     }
     [Hidden]
     public void changed(Topic src, Perform p) {
-      if(p.art==Perform.Art.remove && _owner!=null) {
+      if(_owner == null) {
+        return;
+      }
+      if(p.art == Perform.Art.remove) {
         _owner.Remove(p.prim);
-      } else if(p.art==Perform.Art.changed && src.vType==typeof(PiAlias)) {
-        if(src==input.owner) {
-          input.DelCont(this);
-          ipAlias=src.As<PiAlias>();
-          input=ipAlias.origin;
-          input.op=true;
-          ipAlias.AddLink(this);
-          input.AddCont(this);
-        } else if(src==output.owner) {
-          output.DelCont(this);
-          opAlias=src.As<PiAlias>();
-          output=opAlias.origin;
-          if(output.ip) {
-            throw new ArgumentException(string.Format("{0} already hat source", src.path));
+      } else if(p.art == Perform.Art.changed) {
+        if(src.vType == typeof(PiAlias)) {
+          PiAlias al = src.As<PiAlias>();
+          if(src == _ipTopic) {
+            input.DelCont(this);
+            input = al.origin;
+            input.op = true;
+            al.AddLink(this);
+            input.AddCont(this);
+          } else if(src == _opTopic) {
+            output.DelCont(this);
+            output = al.origin;
+            if(output.ip) {
+              throw new ArgumentException(string.Format("{0} already hat source", _opTopic.path));
+            }
+            output.ip = true;
+            al.AddLink(this);
+            output.AddCont(this);
+          } else {
+            return;
           }
-          output.ip=true;
-          opAlias.AddLink(this);
-          output.AddCont(this);
-        } else {
+        } else if(src != input.owner) {
           return;
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
-          output.owner.Set(input.owner._value, p.prim);
+          output.owner.Set(input.owner._value, _owner);
         }
-      } else if((p.art==Perform.Art.changed || p.art==Perform.Art.subscribe) && src==input.owner && (input.layer!=0 || input.owner._value.IsDefinded)) {
-        output.owner.Set(input.owner._value, p.prim);
       }
     }
     [DoNotEnumerate]
     public JSObject toJSON(JSObject obj) {
       var r=JSObject.CreateObject();
       r["$type"]="PiLink";
-      r["i"]=ipAlias!=null?ipAlias.owner.path:input.owner.path;
-      r["o"]=opAlias!=null?opAlias.owner.path:output.owner.path;
+      r["i"] = _ipTopic.path;
+      r["o"] = _opTopic.path;
       return r;
     }
     [Hidden]

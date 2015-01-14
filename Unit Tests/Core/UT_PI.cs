@@ -331,10 +331,10 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       Assert.AreEqual(1, l1_v.input.layer);
       Assert.AreEqual(1, l1_v.output.layer);
-      string json=l1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
-      PLC.instance.Tick();
       Assert.AreEqual(5, v2.As<int>());
+
+      string json = l1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
     }
     [TestMethod]
     public void T21() {
@@ -368,12 +368,17 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       Assert.AreEqual(1, l1_v.input.layer);
       Assert.AreEqual(1, l1_v.output.layer);
-      string json=k2_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc22/v2\"}", json);
-      json=l1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
-      PLC.instance.Tick();
       Assert.AreEqual(42, v2.As<int>());
+
+      v1.Set(43);
+      PLC.instance.Tick();
+      Assert.AreEqual(43, v2.As<int>());
+
+      string json = k2_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc22/v2\"}", json);
+      json = l1_t.ToJson();
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
+
     }
     [TestMethod]
     public void T23() {
