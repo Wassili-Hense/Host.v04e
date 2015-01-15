@@ -130,6 +130,7 @@ namespace X13.PLC {
     private Topic _owner;
     private Topic _ipTopic;
     private Topic _opTopic;
+
     public PiVar input;
     public PiVar output;
     public int layer;
@@ -205,11 +206,11 @@ namespace X13.PLC {
             al.AddLink(this);
             input.AddCont(this);
           } else if(src == _opTopic) {
-            output.DelCont(this);
-            output = al.origin;
-            if(output.ip) {
+            if(al.origin.ip) {
               throw new ArgumentException(string.Format("{0} already hat source", _opTopic.path));
             }
+            output.DelCont(this);
+            output = al.origin;
             output.ip = true;
             al.AddLink(this);
             output.AddCont(this);

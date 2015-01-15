@@ -354,6 +354,7 @@ namespace UnitTests.Core {
       string json=a1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}", json);
     }
+    /// <summary>Link (var, alias)</summary>
     [TestMethod]
     public void T22() {
       var p=Topic.root.Get("/plc22");
@@ -378,7 +379,6 @@ namespace UnitTests.Core {
       Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc22/v2\"}", json);
       json = l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
-
     }
     [TestMethod]
     public void T23() {
@@ -394,26 +394,31 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       Assert.AreEqual(1, l1_v.input.layer);
       Assert.AreEqual(1, l1_v.output.layer);
+      Assert.AreEqual(24, v2.As<int>());
+
+      v1.Set(23);
+      PLC.instance.Tick();
+      Assert.AreEqual(23, v2.As<int>());
+
       string json=k1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc23/v1\"}", json);
       json=l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc23/v1_alias\",\"o\":\"/plc23/v2\"}", json);
-      PLC.instance.Tick();
-      Assert.AreEqual(24, v2.As<int>());
     }
     [TestMethod]
     public void T24() {
       var p = Topic.root.Get("/plc24");
-      var a1_t = p.Get("A01");
-      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
-      var v1=p.Get("v1");
       var k1_t=p.Get("v1_alias");
       k1_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v1\"}");
+      var k2_t=p.Get("v2_alias");
+      k2_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v2\"}");
+      var a1_t = p.Get("A01");
+      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
       var l1_t=p.Get("w001");
       l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/v1_alias\",\"o\":\"/plc24/A01/A\"}");
       var l2_t=p.Get("w002");
-      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/A01/Q\",\"o\":\"/plc24/v2\"}");
-      v1.value=28.3;
+      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/A01/Q\",\"o\":\"/plc24/v2_alias\"}");
+      p.Get("v1").value=28.3;
       PLC.instance.Tick();
       var a1=a1_t.As<PiBlock>();
       PLC.instance.Tick();
