@@ -28,7 +28,7 @@ namespace X13 {/*
         return testContextInstance;
       }
       set {
-        testContextInstance = value;
+        testContextInstance = defaultValue;
       }
     }
 

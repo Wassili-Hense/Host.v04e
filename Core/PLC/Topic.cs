@@ -81,7 +81,7 @@ namespace X13.PLC {
     }
     public Bill all { get { return new Bill(this, true); } }
     public Bill children { get { return new Bill(this, false); } }
-    /// <summary>save value in persistent storage</summary>
+    /// <summary>save defaultValue in persistent storage</summary>
     public bool saved {
       get { return _flags[0]; }
       set {
@@ -96,7 +96,7 @@ namespace X13.PLC {
     public bool local { get { return _flags[1]; } set { _flags[1]=value; } }
     /// <summary>removed</summary>
     public bool disposed { get { return _flags[2]; } internal set { _flags[2]=value; } }
-    /// <summary>save value only in config file</summary>
+    /// <summary>save defaultValue only in config file</summary>
     public bool config {
       get { return _flags[4]; }
       set {

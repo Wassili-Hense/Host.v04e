@@ -241,6 +241,9 @@ namespace X13.PLC {
             case "PiAlias":
               cmd.src._value=new PiAlias(cmd.src.Get(jso["alias"].As<string>(), true, cmd.prim));
               break;
+            case "PiDeclarer":
+              cmd.src._value=new PiDeclarer(jso);
+              break;
             default:
               X13.lib.Log.Warning("{0}.setJson({1}) - unknown $type", cmd.src.path, cmd.o);
               break;

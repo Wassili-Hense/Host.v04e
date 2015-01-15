@@ -21,7 +21,9 @@ namespace UnitTests.Core {
       PLC.instance.Init();
       PLC.instance.Tick();
     }
-
+    private void DefInc() {
+      Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+    }
     [TestMethod]
     public void T01() {
       Topic A1=root.Get("A1");
@@ -338,10 +340,12 @@ namespace UnitTests.Core {
       string json = l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
     }
+    /// <summary>Block(INC)</summary>
     [TestMethod]
     public void T21() {
+      DefInc();
       var p = Topic.root.Get("/plc2");
-      var a1 = new PiBlock("ADD");
+      var a1 = new PiBlock("INC");
       var a1_t = p.Get("A01");
       var a1_a = a1_t.Get("A");
       var a1_q_t=a1_t.Get("Q");
@@ -354,7 +358,7 @@ namespace UnitTests.Core {
       Assert.AreEqual(2, a1._pins["Q"].layer);
       Assert.AreEqual(4, a1_q_t.As<int>());
       string json=a1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}", json);
+      Assert.AreEqual("{\"$type\":\"PiBlock\",\"func\":\"INC\"}", json);
     }
     /// <summary>Link (var, alias)</summary>
     [TestMethod]
@@ -382,6 +386,7 @@ namespace UnitTests.Core {
       json = l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
     }
+    /// <summary>Link (alias, var)</summary>
     [TestMethod]
     public void T23() {
       var p=Topic.root.Get("/plc23");
@@ -407,15 +412,17 @@ namespace UnitTests.Core {
       json=l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc23/v1_alias\",\"o\":\"/plc23/v2\"}", json);
     }
+    /// <summary>SetJson, Block(INC, A=alias, Q=alias)</summary>
     [TestMethod]
     public void T24() {
+      DefInc();
       var p = Topic.root.Get("/plc24");
       var k1_t=p.Get("v1_alias");
       k1_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v1\"}");
       var k2_t=p.Get("v2_alias");
       k2_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v2\"}");
       var a1_t = p.Get("A01");
-      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"ADD\"}");
+      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"INC\"}");
       var l1_t=p.Get("w001");
       l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/v1_alias\",\"o\":\"/plc24/A01/A\"}");
       var l2_t=p.Get("w002");
