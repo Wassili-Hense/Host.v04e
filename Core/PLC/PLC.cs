@@ -114,6 +114,7 @@ namespace X13.PLC {
       switch(c.art) {
       case Perform.Art.create:
         if((t = c.src.parent) != null) {
+          t._children[c.src.name]=c.src;
           if(t._subRecords != null) {
             foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
               c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });

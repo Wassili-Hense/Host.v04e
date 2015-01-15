@@ -128,6 +128,7 @@ namespace UnitTests.Core {
       var arr=t0.children.ToArray();
       Assert.AreEqual(0, arr.Length);
       var t1=t0.Get("ch_a");
+      PLC.instance.Tick();
       arr=t0.children.ToArray();
       Assert.AreEqual(1, arr.Length);
       Assert.AreEqual(t1, arr[0]);
@@ -136,6 +137,7 @@ namespace UnitTests.Core {
       t2=t1.Get("b");
       t1=t0.Get("ch_c");
       t2=t1.Get("a");
+      PLC.instance.Tick();
       arr=t0.children.ToArray();
       Assert.AreEqual(3, arr.Length);
       arr=t0.all.ToArray();

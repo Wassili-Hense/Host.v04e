@@ -138,7 +138,6 @@ namespace X13.PLC {
         if(next==null) {
           if(create) {
             next=new Topic(home, pt[i]);
-            home._children.Add(pt[i], next);
             var c=Perform.Create(next, Perform.Art.create, prim);
             PLC.instance.DoCmd(c);
           } else {
@@ -170,7 +169,6 @@ namespace X13.PLC {
         throw new ArgumentException(string.Concat(this.path, ".Move(", nParent.path, "/", nName, ") - destination already exist"));
       }
       Topic dst=new Topic(nParent, nName);
-      nParent._children.Add(nName, dst);
       var c=Perform.Create(this, Perform.Art.move, prim);
       c.o=dst;
       PLC.instance.DoCmd(c);
