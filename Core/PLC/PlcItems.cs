@@ -64,6 +64,7 @@ namespace X13.PLC {
       return string.Concat(owner.path, "[", this.ip ? "I" : " ", this.op ? "O" : " ", ", ", layer.ToString(), "]");
     }
   }
+
   internal class PiAlias : CustomType, PlcItem {
     private Topic _owner;
     private List<PiLink> links;
@@ -127,6 +128,45 @@ namespace X13.PLC {
   }
 
   internal class PiLink : CustomType, PlcItem {
+    internal static string RelativePath(Topic mp, Topic sp) {
+      if(sp.path.Length>mp.path.Length && sp.path.StartsWith(mp.path) && sp.path[mp.path.Length]=='/') {
+        return sp.path.Substring(mp.path.Length+1);
+      }
+      StringBuilder sb=new StringBuilder();
+      var mpl=mp.path.Split(Topic.Bill.delmiterArr, StringSplitOptions.RemoveEmptyEntries);
+      var spl=sp.path.Split(Topic.Bill.delmiterArr, StringSplitOptions.RemoveEmptyEntries);
+      if(mpl.Length+1<spl.Length || mpl.Length>spl.Length+1) {
+        return sp.path;
+      }
+      bool pass=true;
+      int j=0;
+      for(int i=0; i<mpl.Length; i++) {
+        if(pass) {
+          if(spl.Length<=i) {
+            return sp.path;
+          }
+          if(mpl[i]!=spl[i]) {
+            if(i+2<spl.Length) {
+              return sp.path;
+            }
+            j=i;
+            pass=false;
+          } else {
+            j=i+1;
+            continue;
+          }
+        }
+        sb.Append("../");
+      }
+      for(; j<spl.Length; j++) {
+        sb.Append(spl[j]);
+        if(j+1<spl.Length) {
+          sb.Append("/");
+        }
+      }
+      return sb.ToString();
+    }
+
     private Topic _owner;
     private Topic _ipTopic;
     private Topic _opTopic;
@@ -229,8 +269,8 @@ namespace X13.PLC {
     public JSObject toJSON(JSObject obj) {
       var r=JSObject.CreateObject();
       r["$type"]="PiLink";
-      r["i"] = _ipTopic.path;
-      r["o"] = _opTopic.path;
+      r["i"] = _owner==null || _owner.parent==null?_ipTopic.path:RelativePath(_owner.parent, _ipTopic);
+      r["o"] = _owner==null || _owner.parent==null?_opTopic.path:RelativePath(_owner.parent, _opTopic);
       return r;
     }
     [Hidden]
@@ -238,6 +278,7 @@ namespace X13.PLC {
       return string.Concat(input.owner.path, " - ", output.owner.path);
     }
   }
+
   internal class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
     static PiBlock() {
     }
@@ -369,6 +410,7 @@ namespace X13.PLC {
 
     }
   }
+
   internal class PiDeclarer : CustomType {
     private static NiL.JS.Core.BaseTypes.Function ctor;
     private static Topic _catalog;
@@ -410,7 +452,7 @@ namespace X13.PLC {
       pins=new SortedList<string, PinDeclarer>();
       tmp=jso["pins"];
       if(tmp.ValueType==JSObjectType.Object) {
-        foreach(var p in tmp){
+        foreach(var p in tmp) {
           pins[p]=new PinDeclarer(tmp[p]);
         }
       }
@@ -442,6 +484,7 @@ namespace X13.PLC {
       }
     }
   }
+
   internal class PinDeclarer {
     public readonly int position;
     public readonly bool ip;

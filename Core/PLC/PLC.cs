@@ -236,7 +236,7 @@ namespace X13.PLC {
               cmd.src._value=new PiBlock(jso["func"].As<string>());
               break;
             case "PiLink":
-              cmd.src._value=new PiLink(cmd.src.Get(jso["i"].As<string>(), true, cmd.prim), cmd.src.Get(jso["o"].As<string>(), true, cmd.prim));
+              cmd.src._value=new PiLink(cmd.src.parent.Get(jso["i"].As<string>(), true, cmd.prim), cmd.src.parent.Get(jso["o"].As<string>(), true, cmd.prim));
               break;
             case "PiAlias":
               cmd.src._value=new PiAlias(cmd.src.Get(jso["alias"].As<string>(), true, cmd.prim));

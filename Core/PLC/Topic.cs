@@ -129,6 +129,13 @@ namespace X13.PLC {
         if(pt[i]==Bill.maskAll || pt[i]==Bill.maskChildren) {
           throw new ArgumentException(string.Format("{0}[{1}] dont allow wildcard", this.path, path));
         }
+        if(pt[i]==Bill.maskParent) {
+          home=home.parent;
+          if(home==null) {
+            throw new ArgumentException(string.Format("{0}[{1}] BAD path: excessive nesting", this.path, path));
+          }
+          continue;
+        }
         next=null;
         if(home._children==null) {
           home._children=new SortedList<string, Topic>();
@@ -282,6 +289,7 @@ namespace X13.PLC {
       public const string delmiterStr="/";
       public const string maskAll="#";
       public const string maskChildren="+";
+      public const string maskParent="..";
       public static readonly char[] delmiterArr=new char[] { delmiter };
       public static readonly string[] curArr=new string[0];
       public static readonly string[] allArr=new string[] { maskAll };

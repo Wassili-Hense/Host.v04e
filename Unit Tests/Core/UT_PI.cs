@@ -324,6 +324,21 @@ namespace UnitTests.Core {
       cmds1.Clear();
     }
     [TestMethod]
+    public void T19() {
+      var t1=Topic.root.Get("/A/A_A/A_A_A");
+      var t2=t1.parent.Get("A_A_B/A_A_B_A");
+      string rp=PiLink.RelativePath(t1, t2);
+      Assert.AreEqual("../A_A_B/A_A_B_A", rp);
+      rp=PiLink.RelativePath(t2, t1);
+      Assert.AreEqual("../../A_A_A", rp);
+      var t3=t2.Get("A_A_B_A_A");
+      rp=PiLink.RelativePath(t1, t3);
+      Assert.AreEqual(t3.path, rp);
+      rp=PiLink.RelativePath(t3, t1);
+      Assert.AreEqual(t1.path, rp);
+    }
+    /// <summary>Link (var, var)</summary>
+    [TestMethod]
     public void T20() {
       var p=Topic.root.Get("/plc1");
       var v1=p.Get("v1");
@@ -338,7 +353,7 @@ namespace UnitTests.Core {
       Assert.AreEqual(5, v2.As<int>());
 
       string json = l1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc1/v1\",\"o\":\"/plc1/v2\"}", json);
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"v1\",\"o\":\"v2\"}", json);
     }
     /// <summary>Block(INC)</summary>
     [TestMethod]
@@ -384,7 +399,7 @@ namespace UnitTests.Core {
       string json = k2_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc22/v2\"}", json);
       json = l1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc22/v1\",\"o\":\"/plc22/v2_alias\"}", json);
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"v1\",\"o\":\"v2_alias\"}", json);
     }
     /// <summary>Link (alias, var)</summary>
     [TestMethod]
@@ -410,7 +425,7 @@ namespace UnitTests.Core {
       string json=k1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiAlias\",\"alias\":\"/plc23/v1\"}", json);
       json=l1_t.ToJson();
-      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"/plc23/v1_alias\",\"o\":\"/plc23/v2\"}", json);
+      Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"v1_alias\",\"o\":\"v2\"}", json);
     }
     /// <summary>SetJson, Block(INC, A=alias, Q=alias)</summary>
     [TestMethod]
@@ -424,9 +439,9 @@ namespace UnitTests.Core {
       var a1_t = p.Get("A01");
       a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"INC\"}");
       var l1_t=p.Get("w001");
-      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/v1_alias\",\"o\":\"/plc24/A01/A\"}");
+      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"v1_alias\",\"o\":\"A01/A\"}");
       var l2_t=p.Get("w002");
-      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"/plc24/A01/Q\",\"o\":\"/plc24/v2_alias\"}");
+      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"A01/Q\",\"o\":\"v2_alias\"}");
       p.Get("v1").value=28.3;
       PLC.instance.Tick();
       var a1=a1_t.As<PiBlock>();
@@ -435,9 +450,8 @@ namespace UnitTests.Core {
       Assert.AreEqual(2, a1.layer);
       Assert.AreEqual(2, a1._pins["Q"].layer);
       PLC.instance.Tick();
-      var v2=p.Get("v2");
+      var v2=a1_t.Get("../v2");
       Assert.AreEqual(29.3, v2.As<double>());
     }
-
   }
 }
