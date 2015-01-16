@@ -298,29 +298,27 @@ namespace X13.PLC {
     }
 
     private void children_changed(Topic src, Perform p) {
-      if(src.name == "$INF") {
+      PinDeclarer pd;
+      if(_decl==null && !_decl.pins.TryGetValue(src.name, out pd)) {
         return;
       }
-      if(p.art == Perform.Art.create || p.art == Perform.Art.subscribe) {
-        if(!_pins.ContainsKey(src.name)) {
-          var pin = PLC.instance.GetVar(src, true, true);
-          if(src.name=="A") {
-            //pin.ip=true;
-          } else if(src.name == "Q") {
-            pin.op = true;
-          }
-          pin.AddCont(this);
-          _pins.Add(src.name, pin);
+      if(p.art != Perform.Art.remove && p.art == Perform.Art.unsubscribe) {
+        PiVar v;
+        if(!_pins.TryGetValue(src.name, out v)) {
+          v = PLC.instance.GetVar(src, true);
+          v.ip=pd.ip;
+          v.op=pd.op;
+          v.AddCont(this);
+          _pins.Add(src.name, v);
           if(_pins.Count == 1) {
             PLC.instance.AddBlock(this);
           }
         }
-      }
-      if(p.art == Perform.Art.changed || p.art == Perform.Art.subscribe) {
-        PiVar v;
-        if(_pins.TryGetValue(src.name, out v) && (v.ip || p.art == Perform.Art.subscribe) && p.prim != PLC.instance.sign) {
-          if(_decl!=null) {
-            _decl.Calc(this);
+        if((p.art == Perform.Art.changed || p.art == Perform.Art.subscribe)) {
+          if(pd.ip || p.art == Perform.Art.subscribe) {
+            if(_decl!=null) {
+              _decl.Calc(this);
+            }
           }
         }
       }

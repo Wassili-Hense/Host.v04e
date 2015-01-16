@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace X13.PLC {
   public class PLC {
@@ -18,16 +19,11 @@ namespace X13.PLC {
     private ConcurrentQueue<Perform> _tcQueue;
     private List<Perform> _prOp;
     private int _busyFlag;
-    private Topic _sign1;
-    private Topic _sign2;
-    private bool _signFl;
     private int _pfPos;
 
     private List<PiBlock> _blocks;
     private Dictionary<Topic, PiVar> _vars;
     private List<PiVar> _rLayerVars;
-    public Topic sign { get { return _signFl ? _sign1 : _sign2; } }
-    internal Topic signAlt { get { return _signFl ? _sign2 : _sign1; } }
 
     public PLC() {
       _blocks = new List<PiBlock>();
@@ -41,12 +37,6 @@ namespace X13.PLC {
       if(Topic.root.children.Any()) {
         this.Clear();
       }
-      _sign1 = Topic.root.Get("/etc/plugins/PLC/sign1");
-      _sign1.local = true;
-      _sign1.saved = false;
-      _sign2 = Topic.root.Get("/etc/plugins/PLC/sign2");
-      _sign2.local = true;
-      _sign2.saved = false;
     }
     public void Start() {
     }
@@ -54,6 +44,117 @@ namespace X13.PLC {
       _blocks.Clear();
       _vars.Clear();
     }
+
+    public static void Export(string filename, Topic head) {
+      if(filename==null || head==null) {
+        throw new ArgumentNullException();
+      }
+      XDocument doc=new XDocument(new XElement("root", new XAttribute("head", head.path)));
+      if(head.vType!=null) {
+        doc.Root.Add(new XAttribute("value", head.ToJson()));
+        if(head.saved) {
+          doc.Root.Add(new XAttribute("saved", bool.TrueString));
+        }
+      }
+      foreach(Topic t in head.children) {
+        Export(doc.Root, t);
+      }
+
+      using(StreamWriter sw = File.CreateText(filename)) {
+        using(var writer = new System.Xml.XmlTextWriter(sw)) {
+          writer.Formatting = System.Xml.Formatting.Indented;
+          writer.QuoteChar = '\'';
+          writer.WriteNode(doc.CreateReader(), false);
+          writer.Flush();
+        }
+      }
+    }
+    private static void Export(XElement xParent, Topic tCur) {
+      if(xParent==null || tCur==null) {
+        return;
+      }
+      XElement xCur=new XElement("item", new XAttribute("name", tCur.name));
+
+      if(tCur.vType!=null) {
+        string json=tCur.ToJson();
+        if(json!=null) {
+          xCur.Add(new XAttribute("value", json));
+          if(tCur.saved) {
+            xCur.Add(new XAttribute("saved", bool.TrueString));
+          }
+        }
+      }
+      xParent.Add(xCur);
+      foreach(Topic tNext in tCur.children) {
+        Export(xCur, tNext);
+      }
+    }
+
+    public static bool Import(string fileName, string path=null) {
+      if(string.IsNullOrEmpty(fileName) || !File.Exists(fileName)) {
+        return false;
+      }
+      X13.lib.Log.Debug("Import {0}", fileName);
+      using(StreamReader reader = File.OpenText(fileName)) {
+        Import(reader, path);
+      }
+      return true;
+    }
+    public static void Import(StreamReader reader, string path) {
+      XDocument doc;
+      using(var r = new System.Xml.XmlTextReader(reader)) {
+        doc=XDocument.Load(r);
+      }
+      
+      if(string.IsNullOrEmpty(path) && doc.Root.Attribute("head")!=null) {
+        path=doc.Root.Attribute("head").Value;
+      }
+
+      Topic owner=Topic.root.Get(path);
+      foreach(var xNext in doc.Root.Elements("item")) {
+        Import(xNext, owner);
+      }
+      owner.saved=doc.Root.Attribute("saved")!=null && doc.Root.Attribute("saved").Value!=bool.FalseString;
+      if(doc.Root.Attribute("value")!=null) {
+        owner.SetJson(doc.Root.Attribute("value").Value);
+      }
+    }
+    private static void Import(XElement xElement, Topic owner) {
+      if(xElement==null || owner==null || xElement.Attribute("name")==null) {
+        return;
+      }
+      Version ver;
+      Topic cur;
+      bool setVersion=false;
+      if(xElement.Attribute("version")!=null && Version.TryParse(xElement.Attribute("ver").Value, out ver)) {
+        if(owner.Exist(xElement.Attribute("name").Value, out cur)) {
+          Topic tVer;
+          Version oldVer;
+          if(!cur.Exist("$INF\version", out tVer) || tVer.vType!=typeof(string) || !Version.TryParse(tVer.As<string>(), out oldVer) || oldVer<ver) {
+            setVersion=true;
+            cur.Remove();
+          } else {
+            return; // don't import older version
+          }
+        } else {
+          setVersion=true;
+        }
+      } else {
+        ver=default(Version);
+      }
+      cur=owner.Get(xElement.Attribute("name").Value);
+      foreach(var xNext in xElement.Elements("item")) {
+        Import(xNext, cur);
+      }
+      cur.saved=xElement.Attribute("saved")!=null && xElement.Attribute("saved").Value!=bool.FalseString;
+      if(xElement.Attribute("value")!=null) {
+        cur.SetJson(xElement.Attribute("value").Value);
+      }
+      if(setVersion) {
+        cur.Get("$INF\version").value=ver.ToString();
+      }
+    }
+
 
     internal void Tick() {
       if(Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
@@ -92,6 +193,7 @@ namespace X13.PLC {
         }
         if(cmd.art != Perform.Art.set) {
           cmd.src.Publish(cmd);
+          X13.lib.Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
         }
         //if(cmd.src.disposed) {
         //  cmd.src._flags[3]=true;
@@ -105,7 +207,6 @@ namespace X13.PLC {
         _rLayerVars.Clear();
       }
       _prOp.Clear();
-      _signFl = !_signFl;
       _busyFlag = 1;
     }
     private void TickStep1(Perform c) {
@@ -114,7 +215,7 @@ namespace X13.PLC {
       switch(c.art) {
       case Perform.Art.create:
         if((t = c.src.parent) != null) {
-          t._children[c.src.name]=c.src;
+          //t._children[c.src.name]=c.src;
           if(t._subRecords != null) {
             foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
               c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
@@ -344,7 +445,7 @@ namespace X13.PLC {
             return;
           }
         } else {
-          if(idx >= _pfPos) {
+          if(idx <= _pfPos) {
             _tcQueue.Enqueue(cmd);               // Published in next tick
             return;
           }
@@ -405,8 +506,9 @@ namespace X13.PLC {
             v1.layer = 1;
           }
           foreach(var l in v1._cont.Select(z => z as PiLink).Where(z => z!=null && z.input == v1)) {
-            l.layer = v1.layer;
+            l.layer = v1.layer+1;
             l.output.layer = l.layer;
+            X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", l.output, l.layer, v1);
             l.output.calcPath = v1.calcPath;
             vQu.Enqueue(l.output);
           }
@@ -414,6 +516,7 @@ namespace X13.PLC {
             if(v1.calcPath.Contains(v1.block)) {
               if(v1.layer > 0) {
                 v1.layer = -v1.layer;
+                X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v1, v1.layer, v1.block);
               }
               X13.lib.Log.Debug("{0} make loop", v1.owner.path);
             } else if(v1.block._pins.Where(z => z.Value.ip).All(z => z.Value.layer >= 0)) {
@@ -421,6 +524,7 @@ namespace X13.PLC {
               v1.block.calcPath = v1.block.calcPath.Union(v1.calcPath).ToArray();
               foreach(var v3 in v1.block._pins.Where(z => z.Value.op).Select(z => z.Value)) {
                 v3.layer = v1.block.layer;
+                X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, v1);
                 v3.calcPath = v1.block.calcPath;
                 if(!vQu.Contains(v3)) {
                   vQu.Enqueue(v3);
@@ -437,6 +541,7 @@ namespace X13.PLC {
           bl.layer = bl._pins.Select(z => z.Value).Where(z => !z.op && z.layer > 0).Max(z => z.layer) + 1;
           foreach(var v3 in bl._pins.Select(z => z.Value).Where(z => z.op)) {
             v3.layer = bl.layer;
+            X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);
             v3.calcPath = bl.calcPath;
             if(!vQu.Contains(v3)) {
               vQu.Enqueue(v3);

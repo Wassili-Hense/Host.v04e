@@ -144,9 +144,16 @@ namespace X13.PLC {
         }
         if(next==null) {
           if(create) {
-            next=new Topic(home, pt[i]);
-            var c=Perform.Create(next, Perform.Art.create, prim);
-            PLC.instance.DoCmd(c);
+            lock(home._children) {
+              if(home._children.TryGetValue(pt[i], out next)) {
+                home=next;
+              } else {
+                next=new Topic(home, pt[i]);
+                home._children[pt[i]]=next;
+                var c=Perform.Create(next, Perform.Art.create, prim);
+                PLC.instance.DoCmd(c);
+              }
+            }
           } else {
             return null;
           }
@@ -176,6 +183,9 @@ namespace X13.PLC {
         throw new ArgumentException(string.Concat(this.path, ".Move(", nParent.path, "/", nName, ") - destination already exist"));
       }
       Topic dst=new Topic(nParent, nName);
+      lock(nParent._children) {
+        nParent._children[nName]=dst;
+      }
       var c=Perform.Create(this, Perform.Art.move, prim);
       c.o=dst;
       PLC.instance.DoCmd(c);
@@ -259,7 +269,6 @@ namespace X13.PLC {
             if((func=_subRecords[i].f)!=null && (_subRecords[i].ma.Length==0 || _subRecords[i].ma[0]==Bill.maskAll)) {
               try {
                 func(this, cmd);
-                Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
               }
               catch(Exception ex) {
                 Log.Warning("{0}.{1}({2}, {4}) - {3}", func.Method.DeclaringType.Name, func.Method.Name, this.path, ex.ToString(), cmd.art.ToString());

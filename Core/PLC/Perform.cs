@@ -53,7 +53,7 @@ namespace X13.PLC {
       } else if((v=PLC.instance.GetVar(src, false))!=null) {
         this.layer=v.layer;
       } else {
-        this.layer=int.MinValue;
+        this.layer=-1;
       }
     }
 
@@ -70,7 +70,7 @@ namespace X13.PLC {
       return _prio[((int)this.art)].CompareTo(_prio[(int)(other.art)]);
     }
     public override string ToString() {
-      return string.Concat(src.path, "[", art.ToString(), ", ", o==null?"null":o.ToString(), "]");
+      return string.Concat(src.path, "[", art.ToString(), ", ", layer.ToString() , "]=", o==null?"null":o.ToString());
     }
     public enum Art {
       create=1,
