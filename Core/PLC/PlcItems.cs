@@ -203,14 +203,14 @@ namespace X13.PLC {
         _owner = value;
 
         if(_owner != null) {
-          if((al = _ipTopic.As<PiAlias>()) != null) {
+          if(_ipTopic.vType==typeof(PiAlias) && (al = _ipTopic.As<PiAlias>()) != null) {
             input = al.origin;
             al.AddLink(this);
           } else {
             input = PLC.instance.GetVar(_ipTopic, true);
           }
           input.op = true;
-          if((al = _opTopic.As<PiAlias>()) != null) {
+          if(_opTopic.vType==typeof(PiAlias) && (al = _opTopic.As<PiAlias>()) != null) {
             output = al.origin;
             al.AddLink(this);
           } else {
@@ -285,7 +285,7 @@ namespace X13.PLC {
 
     private Topic _owner;
     private string _funcName;
-    private PiDeclarer _decl;
+    internal PiDeclarer _decl;
 
     public int layer;
     public PiBlock[] calcPath;
@@ -299,27 +299,26 @@ namespace X13.PLC {
 
     private void children_changed(Topic src, Perform p) {
       PinDeclarer pd;
-      if(_decl==null && !_decl.pins.TryGetValue(src.name, out pd)) {
+      if(_decl==null) {
         return;
       }
-      if(p.art != Perform.Art.remove && p.art == Perform.Art.unsubscribe) {
+      if(!_decl.pins.TryGetValue(src.name, out pd)) {
+        return;
+      }
+      if(p.art != Perform.Art.remove && p.art != Perform.Art.unsubscribe) {
         PiVar v;
         if(!_pins.TryGetValue(src.name, out v)) {
           v = PLC.instance.GetVar(src, true);
-          v.ip=pd.ip;
-          v.op=pd.op;
+          v.ip=pd.op && !pd.ip;
+          v.op=pd.ip && !pd.op;
           v.AddCont(this);
           _pins.Add(src.name, v);
           if(_pins.Count == 1) {
             PLC.instance.AddBlock(this);
           }
         }
-        if((p.art == Perform.Art.changed || p.art == Perform.Art.subscribe)) {
-          if(pd.ip || p.art == Perform.Art.subscribe) {
-            if(_decl!=null) {
-              _decl.Calc(this);
-            }
-          }
+        if((p.art == Perform.Art.changed && pd.ip) || p.art == Perform.Art.subscribe) {
+          _decl.Calc(this);
         }
       }
     }
@@ -388,7 +387,6 @@ namespace X13.PLC {
         }
         _owner=value;
         if(_owner != null) {
-          _owner.children.changed += children_changed;
           _decl=PiDeclarer.Get(_funcName);
           if(_decl==null) {
             X13.lib.Log.Warning("{0}[{1}] declarer not found", _owner.path, _funcName);
@@ -400,6 +398,7 @@ namespace X13.PLC {
               }
             }
           }
+          _owner.children.changed += children_changed;
         }
       }
     }
@@ -481,6 +480,41 @@ namespace X13.PLC {
         _deinitFunc.Invoke(This, null);
       }
     }
+
+    [DoNotEnumerate]
+    public JSObject toJSON(JSObject obj) {
+      var r=JSObject.CreateObject();
+      r["$type"]="PiDeclarer";
+      if(_initFunc!=null) {
+        r["init"]=GetFunctionBody(_initFunc);
+      }
+      if(_calcFunc!=null) {
+        r["calc"]=GetFunctionBody(_calcFunc);
+      }
+      if(_deinitFunc!=null) {
+        r["deinit"]=GetFunctionBody(_deinitFunc);
+      }
+      if(pins!=null && pins.Count>0) {
+        var p=JSObject.CreateObject();
+        foreach(var kv in pins) {
+          p[kv.Key]=kv.Value.toJSON(null);
+        }
+        r["pins"]=p;
+      }
+      if(!string.IsNullOrEmpty(info)) {
+        r["info"]=info;
+      }
+      if(image!=null) {
+        r["image"]=image;
+      }
+      return r;
+    }
+    private string GetFunctionBody(NiL.JS.Core.BaseTypes.Function f) {
+      string full=f.ToString();
+      int bi=full.IndexOf('{');
+      int ei=full.LastIndexOf('}');
+      return full.Substring(bi+3, ei-bi-5);
+    }
   }
 
   internal class PinDeclarer {
@@ -536,6 +570,30 @@ namespace X13.PLC {
       } else {
         defaultValue=null;
       }
+    }
+    [DoNotEnumerate]
+    public JSObject toJSON(JSObject obj) {
+      var r=JSObject.CreateObject();
+      if(ip) {
+        r["pos"]=(char)('A'+position);
+      } else if(op) {
+        r["pos"]=(char)('a'+position);
+      } else {
+        r["pos"]=(char)('0'+position);
+      }
+      if(mandatory) {
+        r["mandatory"]=true;
+      }
+      if(!string.IsNullOrEmpty(info)) {
+        r["info"]=info;
+      }
+      if(!string.IsNullOrEmpty(declarer)) {
+        r["declarer"]=info;
+      }
+      if(defaultValue!=null) {
+        r["default"]=defaultValue;
+      }
+      return r;
     }
   }
 }

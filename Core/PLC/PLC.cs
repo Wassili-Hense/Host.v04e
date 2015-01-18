@@ -500,7 +500,7 @@ namespace X13.PLC {
           v1 = vQu.Dequeue();
           if(v1.layer == 0) {
             v1.calcPath = new PiBlock[0];
-            if(v1.block != null && v1.block.layer == 0 && v1.op) {
+            if(v1.block != null && v1.block.layer == 0 && v1.block._decl.pins[v1.owner.name].op) {
               continue;
             }
             v1.layer = 1;
@@ -519,10 +519,10 @@ namespace X13.PLC {
                 X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v1, v1.layer, v1.block);
               }
               X13.lib.Log.Debug("{0} make loop", v1.owner.path);
-            } else if(v1.block._pins.Where(z => z.Value.ip).All(z => z.Value.layer >= 0)) {
-              v1.block.layer = v1.block._pins.Where(z => z.Value.ip).Max(z => z.Value.layer) + 1;
+            } else if(v1.block._pins.Where(z => v1.block._decl.pins[z.Key].ip).All(z => z.Value.layer >= 0)) {
+              v1.block.layer = v1.block._pins.Where(z => v1.block._decl.pins[z.Key].ip).Max(z => z.Value.layer) + 1;
               v1.block.calcPath = v1.block.calcPath.Union(v1.calcPath).ToArray();
-              foreach(var v3 in v1.block._pins.Where(z => z.Value.op).Select(z => z.Value)) {
+              foreach(var v3 in v1.block._pins.Where(z => v1.block._decl.pins[z.Key].op).Select(z => z.Value)) {
                 v3.layer = v1.block.layer;
                 X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, v1);
                 v3.calcPath = v1.block.calcPath;
@@ -538,8 +538,9 @@ namespace X13.PLC {
           foreach(var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
             bl.calcPath = bl.calcPath.Union(ip.calcPath).ToArray();
           }
-          bl.layer = bl._pins.Select(z => z.Value).Where(z => !z.op && z.layer > 0).Max(z => z.layer) + 1;
-          foreach(var v3 in bl._pins.Select(z => z.Value).Where(z => z.op)) {
+          
+          bl.layer = bl._pins.Where(z =>bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
+          foreach(var v3 in bl._pins.Where(z => bl._decl.pins[z.Key].op).Select(z=>z.Value)) {
             v3.layer = bl.layer;
             X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);
             v3.calcPath = bl.calcPath;

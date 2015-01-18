@@ -442,15 +442,13 @@ namespace UnitTests.Core {
       l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"v1_alias\",\"o\":\"A01/A\"}");
       var l2_t=p.Get("w002");
       l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"A01/Q\",\"o\":\"v2_alias\"}");
-      p.Get("v1").value=0;
-      PLC.instance.Tick();
       p.Get("v1").value=28.3;
+      PLC.instance.Tick();
       PLC.instance.Tick();
       var a1=a1_t.As<PiBlock>();
       Assert.AreEqual(2, a1._pins["A"].layer);
       Assert.AreEqual(3, a1.layer);
       Assert.AreEqual(3, a1._pins["Q"].layer);
-      PLC.instance.Tick();
       var v2=a1_t.Get("../v2");
       Assert.AreEqual(29.3, v2.As<double>());
       PLC.Export("T24.xst", Topic.root);
@@ -462,14 +460,18 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       var p = Topic.root.Get("/plc24");
       var a1=p.Get("A01").As<PiBlock>();
+      Assert.AreEqual(2, a1._pins["A"].layer);
+      Assert.AreEqual(3, a1.layer);
+      Assert.AreEqual(3, a1._pins["Q"].layer);
+      var v2=p.Get("v2");
+      Assert.AreEqual(29.3, v2.As<double>());
       PLC.instance.Tick();
-      Assert.AreEqual(1, a1._pins["A"].layer);
-      Assert.AreEqual(2, a1.layer);
-      Assert.AreEqual(2, a1._pins["Q"].layer);
+      Assert.AreEqual(2, a1._pins["A"].layer);
+      Assert.AreEqual(3, a1.layer);
+      Assert.AreEqual(3, a1._pins["Q"].layer);
       p.Get("v1").value=-0.55;
       PLC.instance.Tick();
-      var v2=p.Get("v2");
-      Assert.AreEqual(0.45, v2.As<double>());
+      Assert.AreEqual<double>((-0.55+1), v2.As<double>());
     }
   }
 }

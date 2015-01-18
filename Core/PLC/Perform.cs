@@ -46,11 +46,8 @@ namespace X13.PLC {
       this.art=art;
       this.prim=prim;
 
-      PiBlock b;
       PiVar v;
-      if((b=o as PiBlock)!=null) {
-        this.layer=b.layer;
-      } else if((v=PLC.instance.GetVar(src, false))!=null) {
+      if((v=PLC.instance.GetVar(src, false))!=null) {
         this.layer=v.layer;
       } else {
         this.layer=-1;
