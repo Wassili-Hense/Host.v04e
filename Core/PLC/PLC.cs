@@ -17,6 +17,7 @@ namespace X13.PLC {
     public static readonly PLC instance;
 
     private ConcurrentQueue<Perform> _tcQueue;
+    private Dictionary<string, Func<JSObject, Topic, Topic, JSObject>> _knownTypes;
     private List<Perform> _prOp;
     private int _busyFlag;
     private int _pfPos;
@@ -29,6 +30,7 @@ namespace X13.PLC {
       _blocks = new List<PiBlock>();
       _vars = new Dictionary<Topic, PiVar>();
       _tcQueue = new ConcurrentQueue<Perform>();
+      _knownTypes=new Dictionary<string, Func<JSObject, Topic, Topic, JSObject>>();
       _rLayerVars = new List<PiVar>();
       _prOp = new List<Perform>(128);
       _busyFlag = 1;
@@ -37,6 +39,10 @@ namespace X13.PLC {
       if(Topic.root.children.Any()) {
         this.Clear();
       }
+      _knownTypes["PiAlias"]=(j, s, p) => new PiAlias(j, s, p);
+      _knownTypes["PiLink"]=(j, s, p) => new PiLink(j, s, p);
+      _knownTypes["PiBlock"]=(j, s, p) => new PiBlock(j, s, p);
+      _knownTypes["PiDeclarer"]=(j, s, p) => new PiDeclarer(j, s, p);
     }
     public void Start() {
     }
@@ -156,6 +162,9 @@ namespace X13.PLC {
       }
     }
 
+    public void RegisterType(string name, Func<JSObject, Topic, Topic, JSObject> f) {
+      _knownTypes[name]=f;
+    }
 
     internal void Tick() {
       if(Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
@@ -184,7 +193,7 @@ namespace X13.PLC {
             }
           }
         }
-        if(cmd.art == Perform.Art.changed || cmd.art == Perform.Art.create) {
+        if(cmd.art == Perform.Art.changed) {
           if(cmd.src._value != null && !cmd.src.disposed) {
             ITenant tt;
             if((tt = cmd.src._value as ITenant) != null) {
@@ -201,7 +210,7 @@ namespace X13.PLC {
         //}
       }
       if(_rLayerVars.Any()) {
-        CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => !z.ip)));
+        CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer!=0).Union(_rLayerVars.Where(z => !z.ip))));
         if(_rLayerVars.Any(z => z.layer == 0)) {
           CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer == 0)));
         }
@@ -264,7 +273,10 @@ namespace X13.PLC {
               } else {
                 c.src.Unsubscribe(sr.mask, func);
               }
-              EnquePerf(Perform.Create(tmp, c.art, c.src));
+              var np=Perform.Create(tmp, c.art, c.src);
+              np.o=c.o;
+              np.i=c.i;
+              EnquePerf(np);
             }
           }
         }
@@ -333,22 +345,11 @@ namespace X13.PLC {
           var jso= JSON.parse((string)cmd.o);
           JSObject ty;
           if(jso.ValueType==JSObjectType.Object && (ty=jso.GetMember("$type")).IsDefinded) {
-            switch(ty.As<string>()) {
-            case "PiBlock":
-              cmd.src._value=new PiBlock(jso["func"].As<string>());
-              break;
-            case "PiLink":
-              cmd.src._value=new PiLink(cmd.src.parent.Get(jso["i"].As<string>(), true, cmd.prim), cmd.src.parent.Get(jso["o"].As<string>(), true, cmd.prim));
-              break;
-            case "PiAlias":
-              cmd.src._value=new PiAlias(cmd.src.Get(jso["alias"].As<string>(), true, cmd.prim));
-              break;
-            case "PiDeclarer":
-              cmd.src._value=new PiDeclarer(jso);
-              break;
-            default:
+            Func<JSObject, Topic, Topic, JSObject> f;
+            if(_knownTypes.TryGetValue(ty.As<string>(), out f) && f!=null) {
+              cmd.src._value=f(jso, cmd.src, cmd.prim);
+            } else {
               X13.lib.Log.Warning("{0}.setJson({1}) - unknown $type", cmd.src.path, cmd.o);
-              break;
             }
           } else {
             cmd.src._value = jso;
@@ -393,7 +394,7 @@ namespace X13.PLC {
               if((jo = cmd.o as JSObject)!=null) {
                 cmd.src._value=jo;
               } else {
-                cmd.src._value.Assign(new JSObject(cmd.o));
+                cmd.src._value=new JSObject(cmd.o);
               }
             }
             break;

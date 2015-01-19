@@ -11,12 +11,12 @@ namespace X13.PLC {
       //create=1,         1
       //subscribe=2,      2  
       //unsubscribe=3,    2
-      //set=4,            2
-      //setJson=5,        2
-      //changed=6,        2
-      //move=7,           3
-      //remove=8          3
-      _prio=new int[] { 0, 1, 2, 2, 2, 2, 2, 3, 3 };
+      //set=4,            3
+      //setJson=5,        3
+      //changed=6,        3
+      //move=7,           4
+      //remove=8          4
+      _prio=new int[] { 0, 1, 2, 2, 3, 3, 3, 4, 4 };
 
     }
     internal static Perform Create(Topic src, object val, Topic prim) {

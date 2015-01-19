@@ -89,6 +89,9 @@ namespace X13.PLC {
     public bool op;
     public PiVar origin;
 
+    public PiAlias(JSObject jso, Topic src, Topic prim)
+      : this(src.Get(jso["alias"].As<string>(), true, prim)) {
+    }
     public PiAlias(Topic tOrigin) {
       origin=PLC.instance.GetVar(tOrigin, true);
       links=new List<PiLink>();
@@ -191,6 +194,9 @@ namespace X13.PLC {
     public PiVar output;
     public int layer;
 
+    public PiLink(JSObject jso, Topic src, Topic prim)
+      : this(src.parent.Get(jso["i"].As<string>(), true, prim), src.parent.Get(jso["o"].As<string>(), true, prim)) {
+    }
     public PiLink(Topic ip, Topic op) {
       _ipTopic = ip;
       _opTopic = op;
@@ -223,13 +229,13 @@ namespace X13.PLC {
             input = al.origin;
             al.AddLink(this);
           } else {
-            input = PLC.instance.GetVar(_ipTopic, true);
+            input = PLC.instance.GetVar(_ipTopic, true, true);
           }
           if(_opTopic.vType==typeof(PiAlias) && (al = _opTopic.As<PiAlias>()) != null) {
             output = al.origin;
             al.AddLink(this);
           } else {
-            output = PLC.instance.GetVar(_opTopic, true);
+            output = PLC.instance.GetVar(_opTopic, true, true);
           }
 
           input.AddCont(this);
@@ -247,7 +253,7 @@ namespace X13.PLC {
       }
       if(p.art == Perform.Art.remove) {
         _owner.Remove(p.prim);
-      } else if(p.art == Perform.Art.changed) {
+      } else if(p.art == Perform.Art.changed || p.art==Perform.Art.subscribe) {
         if(src.vType == typeof(PiAlias)) {
           PiAlias al = src.As<PiAlias>();
           if(src == _ipTopic) {
@@ -270,7 +276,7 @@ namespace X13.PLC {
           return;
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
-          output.owner.Set(input.owner._value, _owner);
+          output.owner.Set(input.owner._value.Clone(), _owner);
         }
       }
     }
@@ -284,7 +290,7 @@ namespace X13.PLC {
     }
     [Hidden]
     public override string ToString() {
-      return string.Concat(input.owner.path, " - ", output.owner.path);
+      return string.Concat(_ipTopic.path, " >> ", _opTopic.path);
     }
   }
 
@@ -300,6 +306,9 @@ namespace X13.PLC {
     public PiBlock[] calcPath;
     public SortedList<string, PiVar> _pins;
 
+    public PiBlock(JSObject jso, Topic src, Topic prim)
+      : this(jso["func"].As<string>()) {
+    }
     public PiBlock(string func) {
       _funcName=func;
       _pins = new SortedList<string, PiVar>();
@@ -317,7 +326,7 @@ namespace X13.PLC {
       if(p.art != Perform.Art.remove && p.art != Perform.Art.unsubscribe) {
         PiVar v;
         if(!_pins.TryGetValue(src.name, out v)) {
-          v = PLC.instance.GetVar(src, true);
+          v = PLC.instance.GetVar(src, true, true);
           v.AddCont(this);
           _pins.Add(src.name, v);
           if(_pins.Count == 1) {
@@ -355,7 +364,7 @@ namespace X13.PLC {
           return;
         }
         Topic r = _owner.Get(name.ToString(), true, _owner);
-        r.Set(value, _owner);
+        r.Set(value.Clone(), _owner);
       } else {
         base.SetMember(name, value, strict);
       }
@@ -439,7 +448,7 @@ namespace X13.PLC {
     public readonly string image;
     public SortedList<string, PinDeclarer> pins;
 
-    public PiDeclarer(JSObject jso) {
+    public PiDeclarer(JSObject jso, Topic src, Topic prim) {
       JSObject tmp;
       tmp=jso["init"];
       if(tmp.ValueType==JSObjectType.String) {

@@ -472,6 +472,40 @@ namespace UnitTests.Core {
       p.Get("v1").value=-0.55;
       PLC.instance.Tick();
       Assert.AreEqual<double>((-0.55+1), v2.As<double>());
+
+      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
+      var a02 = new PiBlock("MOD");
+      var a02_t = p.Get("A02");
+      var a02_a_t = a02_t.Get("A");
+      var a02_b_t = a02_t.Get("B");
+      var a02_q_t=a02_t.Get("Q");
+      a02_t.value = a02;
+
+      var a01_q=p.Get("A01/Q");
+      var l3_v=new PiLink(a01_q, a02_a_t);
+      var l3_t=p.Get("w003");
+      l3_t.value=l3_v;
+
+      var v3=p.Get("v3");
+      var k3_t=p.Get("v3_alias");
+      k3_t.value=new PiAlias(v3);
+
+      var l4_v=new PiLink(a02_q_t, k3_t);
+      var l4_t=p.Get("w004");
+      l4_t.value=l4_v;
+
+      p.Get("v1").value=19;
+      a02_b_t.value=7;
+      PLC.instance.Tick();
+      PLC.instance.Tick();
+      Assert.AreEqual(4, a02._pins["A"].layer);
+      Assert.AreEqual(1, a02._pins["B"].layer);
+      Assert.AreEqual(5, a02.layer);
+      Assert.AreEqual(5, a02._pins["Q"].layer);
+
+      //Assert.AreEqual(6, v3.As<int>());
+      PLC.Export("T25.xst", Topic.root);
     }
   }
 }
