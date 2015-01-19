@@ -16,11 +16,13 @@ namespace X13.PLC {
   internal class PiVar {
     public readonly Topic owner;
 
-    public bool ip;
-    public bool op;
+    private PlcItem _src;
+    public bool ip { get { return _src!=null; } }
     public int layer;
     public PiBlock[] calcPath;
     public List<PlcItem> _cont;
+    public PiBlock block { get; private set; }
+
 
     public PiVar(Topic src) {
       owner = src;
@@ -40,9 +42,23 @@ namespace X13.PLC {
     public void AddCont(PlcItem i) {
       _cont.Add(i);
       PiBlock b;
+      PiLink l;
       if((b= i as PiBlock)!=null) {
-        if(block!=null) {
-          block=b;
+        block=b;
+        if(block._decl!=null && block._decl.pins[owner.name].op) {
+          if(ip) {
+            throw new ArgumentException(string.Format("{0} already hat source {1}", owner.path, _src));
+          }
+          _src=i;
+          owner.saved=false;
+        }
+      } else if((l=i as PiLink)!=null) {
+        if(l.output==this) {
+          if(ip) {
+            throw new ArgumentException(string.Format("{0} already hat source {1}", owner.path, _src));
+          }
+          _src=i;
+          owner.saved=false;
         }
       }
     }
@@ -51,17 +67,17 @@ namespace X13.PLC {
       if(block==i) {
         block=null;
       }
-      if(!_cont.Any(z => z is PiLink && (z as PiLink).output==this)) {
-        ip=false;
+      if(i==_src) {
+        owner.saved=true;
+        _src=null;
       }
       if(_cont.Count==0) {
         owner.changed -= owner_changed;
         PLC.instance.DelVar(this);
       }
     }
-    public PiBlock block { get; private set; }
     public override string ToString() {
-      return string.Concat(owner.path, "[", this.ip ? "I" : " ", this.op ? "O" : " ", ", ", layer.ToString(), "]");
+      return string.Concat(owner.path, "[", this.ip ? "I" : " ", _cont.Count, ", ", layer.ToString(), "]");
     }
   }
 
@@ -209,17 +225,12 @@ namespace X13.PLC {
           } else {
             input = PLC.instance.GetVar(_ipTopic, true);
           }
-          input.op = true;
           if(_opTopic.vType==typeof(PiAlias) && (al = _opTopic.As<PiAlias>()) != null) {
             output = al.origin;
             al.AddLink(this);
           } else {
             output = PLC.instance.GetVar(_opTopic, true);
           }
-          if(output.ip) {
-            throw new ArgumentException(string.Format("{0} already hat source", _opTopic.path));
-          }
-          output.ip = true;
 
           input.AddCont(this);
           output.AddCont(this);
@@ -242,7 +253,6 @@ namespace X13.PLC {
           if(src == _ipTopic) {
             input.DelCont(this);
             input = al.origin;
-            input.op = true;
             al.AddLink(this);
             input.AddCont(this);
           } else if(src == _opTopic) {
@@ -251,7 +261,6 @@ namespace X13.PLC {
             }
             output.DelCont(this);
             output = al.origin;
-            output.ip = true;
             al.AddLink(this);
             output.AddCont(this);
           } else {
@@ -309,8 +318,6 @@ namespace X13.PLC {
         PiVar v;
         if(!_pins.TryGetValue(src.name, out v)) {
           v = PLC.instance.GetVar(src, true);
-          v.ip=pd.op && !pd.ip;
-          v.op=pd.ip && !pd.op;
           v.AddCont(this);
           _pins.Add(src.name, v);
           if(_pins.Count == 1) {

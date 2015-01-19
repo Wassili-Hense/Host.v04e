@@ -50,11 +50,11 @@ namespace X13.PLC {
         throw new ArgumentNullException();
       }
       XDocument doc=new XDocument(new XElement("root", new XAttribute("head", head.path)));
-      if(head.vType!=null) {
-        doc.Root.Add(new XAttribute("value", head.ToJson()));
-        if(head.saved) {
-          doc.Root.Add(new XAttribute("saved", bool.TrueString));
+      if(head.saved) {
+        if(head.vType!=null) {
+          doc.Root.Add(new XAttribute("value", head.ToJson()));
         }
+        doc.Root.Add(new XAttribute("saved", bool.TrueString));
       }
       foreach(Topic t in head.children) {
         Export(doc.Root, t);
@@ -75,15 +75,16 @@ namespace X13.PLC {
       }
       XElement xCur=new XElement("item", new XAttribute("name", tCur.name));
 
-      if(tCur.vType!=null) {
-        string json=tCur.ToJson();
-        if(json!=null) {
-          xCur.Add(new XAttribute("value", json));
-          if(tCur.saved) {
-            xCur.Add(new XAttribute("saved", bool.TrueString));
+      if(tCur.saved) {
+        if(tCur.vType!=null) {
+          string json=tCur.ToJson();
+          if(json!=null) {
+            xCur.Add(new XAttribute("value", json));
           }
         }
+        xCur.Add(new XAttribute("saved", bool.TrueString));
       }
+
       xParent.Add(xCur);
       foreach(Topic tNext in tCur.children) {
         Export(xCur, tNext);
@@ -105,7 +106,7 @@ namespace X13.PLC {
       using(var r = new System.Xml.XmlTextReader(reader)) {
         doc=XDocument.Load(r);
       }
-      
+
       if(string.IsNullOrEmpty(path) && doc.Root.Attribute("head")!=null) {
         path=doc.Root.Attribute("head").Value;
       }
@@ -512,7 +513,7 @@ namespace X13.PLC {
             l.output.calcPath = v1.calcPath;
             vQu.Enqueue(l.output);
           }
-          if(v1.ip && v1.block != null) {
+          if(v1.block != null && v1.block._decl.pins[v1.owner.name].ip) {
             if(v1.calcPath.Contains(v1.block)) {
               if(v1.layer > 0) {
                 v1.layer = -v1.layer;
@@ -538,9 +539,9 @@ namespace X13.PLC {
           foreach(var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
             bl.calcPath = bl.calcPath.Union(ip.calcPath).ToArray();
           }
-          
-          bl.layer = bl._pins.Where(z =>bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
-          foreach(var v3 in bl._pins.Where(z => bl._decl.pins[z.Key].op).Select(z=>z.Value)) {
+
+          bl.layer = bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
+          foreach(var v3 in bl._pins.Where(z => bl._decl.pins[z.Key].op).Select(z => z.Value)) {
             v3.layer = bl.layer;
             X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);
             v3.calcPath = bl.calcPath;
