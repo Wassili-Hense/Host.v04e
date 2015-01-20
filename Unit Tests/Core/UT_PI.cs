@@ -9,11 +9,18 @@ namespace UnitTests.Core {
   [TestClass]
   public class UT_PI {
     private static Topic root;
-    private static Random r;
     [ClassInitialize()]
     public static void MyClassInitialize(TestContext testContext) {
-      r=new Random((int)DateTime.Now.Ticks);
       root=Topic.root;
+      if(!System.IO.Directory.Exists("../log")) {
+        System.IO.Directory.CreateDirectory("../log");
+      }
+      System.IO.File.Delete("../log/UI_PI.log");
+      X13.lib.Log.Write+=Log_Write;
+    }
+
+    static void Log_Write(X13.lib.LogLevel ll, DateTime dt, string msg) {
+      System.IO.File.AppendAllText("../log/UI_PI.log", string.Concat(dt.ToString("HH:mm:ss.ff"), " [", ll.ToString().Substring(0, 1), "] ", msg, "\r\n"));
     }
 
     [TestInitialize()]
@@ -34,10 +41,9 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T02() {
       Topic A1=root.Get("A1");
-      long val=r.Next();
-      A1.Set(val);
+      A1.Set(918);
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(val, A1.As<long>());
+      Assert.AreEqual(918, A1.As<long>());
     }
     [TestMethod]
     public void T04() {   // parse to bool
@@ -54,7 +60,7 @@ namespace UnitTests.Core {
       A1.Set(0);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(false, A1.As<bool>());
-      A1.Set(r.Next(1, int.MaxValue));
+      A1.Set(12);
       X13.PLC.PLC.instance.Tick();
       Assert.AreEqual(true, A1.As<bool>());
       A1.Set("false");
@@ -114,10 +120,9 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T07() {
       Topic A3=root.Get("A3");
-      long val=r.Next();
-      A3.Set(val);
+      A3.Set(1022);
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(val, A3.As<long>());
+      Assert.AreEqual(1022, A3.As<long>());
       A3.Remove();
       A3.Set(Math.PI);
       X13.PLC.PLC.instance.Tick();
@@ -287,10 +292,10 @@ namespace UnitTests.Core {
       Assert.AreEqual("C3", c3.name);
       Assert.AreEqual(91.02, c3.As<double>());
       Assert.AreEqual(2, cmds1.Count);
-      Assert.AreEqual(b3, cmds1[0].src);
-      Assert.AreEqual(Perform.Art.move, cmds1[0].art);
-      Assert.AreEqual(c3, cmds1[1].src);
-      Assert.AreEqual(Perform.Art.create, cmds1[1].art);
+      Assert.AreEqual(b3, cmds1[1].src);
+      Assert.AreEqual(Perform.Art.move, cmds1[1].art);
+      Assert.AreEqual(c3, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.create, cmds1[0].art);
       cmds1.Clear();
 
       var c3_a=c3.Get("A");
@@ -309,12 +314,12 @@ namespace UnitTests.Core {
       Assert.AreEqual("/D3/A", c3_a.path);
       Assert.AreEqual(9577, c3_a.As<long>());
       Assert.AreEqual(3, cmds1.Count);
-      Assert.AreEqual(c3, cmds1[0].src);
-      Assert.AreEqual(Perform.Art.move, cmds1[0].art);
-      Assert.AreEqual(d3, cmds1[1].src);
+      Assert.AreEqual(c3, cmds1[2].src);
+      Assert.AreEqual(Perform.Art.move, cmds1[2].art);
+      Assert.AreEqual(d3, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.create, cmds1[0].art);
+      Assert.AreEqual(c3_a, cmds1[1].src);
       Assert.AreEqual(Perform.Art.create, cmds1[1].art);
-      Assert.AreEqual(c3_a, cmds1[2].src);
-      Assert.AreEqual(Perform.Art.create, cmds1[2].art);
       cmds1.Clear();
 
       d3.Set(17);
@@ -366,7 +371,6 @@ namespace UnitTests.Core {
       var a1_q_t=a1_t.Get("Q");
       a1_t.value = a1;
       a1_a.value=3;
-      PLC.instance.Tick();
       PLC.instance.Tick();
       Assert.AreEqual(1, a1._pins["A"].layer);
       Assert.AreEqual(2, a1.layer);
@@ -451,10 +455,17 @@ namespace UnitTests.Core {
       Assert.AreEqual(3, a1._pins["Q"].layer);
       var v2=a1_t.Get("../v2");
       Assert.AreEqual(29.3, v2.As<double>());
+
       PLC.Export("T24.xst", Topic.root);
+
+      p.Get("v1").value=1023;
+      PLC.instance.Tick();
+      Assert.AreEqual(1024, v2.As<int>());
+
     }
     [TestMethod]
     public void T25() {
+      X13.lib.Log.Info("T25");
       PLC.Import("T24.xst");
       PLC.instance.Tick();
       PLC.instance.Tick();
@@ -465,20 +476,21 @@ namespace UnitTests.Core {
       Assert.AreEqual(3, a1._pins["Q"].layer);
       var v2=p.Get("v2");
       Assert.AreEqual(29.3, v2.As<double>());
-      PLC.instance.Tick();
       Assert.AreEqual(2, a1._pins["A"].layer);
       Assert.AreEqual(3, a1.layer);
       Assert.AreEqual(3, a1._pins["Q"].layer);
+
       p.Get("v1").value=-0.55;
       PLC.instance.Tick();
       Assert.AreEqual<double>((-0.55+1), v2.As<double>());
 
       Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
 
-      var a02 = new PiBlock("MOD");
+      var a02 = new PiBlock("INC");
       var a02_t = p.Get("A02");
+      //var a02=a02_t.As<PiBlock>();
       var a02_a_t = a02_t.Get("A");
-      var a02_b_t = a02_t.Get("B");
+      //var a02_b_t = a02_t.Get("B");
       var a02_q_t=a02_t.Get("Q");
       a02_t.value = a02;
 
@@ -496,16 +508,16 @@ namespace UnitTests.Core {
       l4_t.value=l4_v;
 
       p.Get("v1").value=19;
-      a02_b_t.value=7;
+      //a02_b_t.value=7;
       PLC.instance.Tick();
       PLC.instance.Tick();
       Assert.AreEqual(4, a02._pins["A"].layer);
-      Assert.AreEqual(1, a02._pins["B"].layer);
+      //Assert.AreEqual(1, a02._pins["B"].layer);
       Assert.AreEqual(5, a02.layer);
       Assert.AreEqual(5, a02._pins["Q"].layer);
 
-      //Assert.AreEqual(6, v3.As<int>());
-      PLC.Export("T25.xst", Topic.root);
+      Assert.AreEqual(21, v3.As<int>());
+      //PLC.Export("T25.xst", Topic.root);
     }
   }
 }

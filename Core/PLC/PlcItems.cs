@@ -28,7 +28,7 @@ namespace X13.PLC {
       owner = src;
       _cont=new List<PlcItem>();
       layer=0;
-      owner.changed+=owner_changed;
+      owner.Subscribe(owner_changed, true);
     }
 
     private void owner_changed(Topic src, Perform p) {
@@ -90,7 +90,7 @@ namespace X13.PLC {
     public PiVar origin;
 
     public PiAlias(JSObject jso, Topic src, Topic prim)
-      : this(src.Get(jso["alias"].As<string>(), true, prim)) {
+      : this(src.GetI(jso["alias"].As<string>(), true, prim, true)) {
     }
     public PiAlias(Topic tOrigin) {
       origin=PLC.instance.GetVar(tOrigin, true);
@@ -122,18 +122,18 @@ namespace X13.PLC {
       set {
         if(_owner!=null) {
           _owner.changed-=_owner_changed;
+          origin.DelCont(this);
         }
         _owner=value;
-        if(_owner == null) {
-          if(_owner!=null) {
-            _owner.changed-=_owner_changed;
-          }
+        if(_owner!=null) {
+          origin.AddCont(this);
+          _owner.Subscribe(_owner_changed, true);
         }
       }
     }
     [Hidden]
     public void changed(Topic src, Perform p) {
-      if(p.art==Perform.Art.remove && _owner!=null) {
+      if(src==origin.owner && p.art==Perform.Art.remove && _owner!=null) {
         _owner.Remove(p.prim);
       }
     }
@@ -195,7 +195,7 @@ namespace X13.PLC {
     public int layer;
 
     public PiLink(JSObject jso, Topic src, Topic prim)
-      : this(src.parent.Get(jso["i"].As<string>(), true, prim), src.parent.Get(jso["o"].As<string>(), true, prim)) {
+      : this(src.parent.GetI(jso["i"].As<string>(), true, prim, true), src.parent.GetI(jso["o"].As<string>(), true, prim, true)) {
     }
     public PiLink(Topic ip, Topic op) {
       _ipTopic = ip;
@@ -241,7 +241,7 @@ namespace X13.PLC {
           input.AddCont(this);
           output.AddCont(this);
           if(input.layer != 0 || input.owner._value.IsDefinded) {
-            output.owner.Set(input.owner._value, _owner);
+            output.owner.SetI(input.owner._value, _owner);
           }
         }
       }
@@ -276,7 +276,7 @@ namespace X13.PLC {
           return;
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
-          output.owner.Set(input.owner._value.Clone(), _owner);
+          output.owner.SetI(input.owner._value.Clone(), _owner);
         }
       }
     }
@@ -348,7 +348,7 @@ namespace X13.PLC {
       }
       string pName=name.As<string>();
       if(_decl.pins.ContainsKey(pName)) {
-        Topic r = _owner.Get(pName, forWrite, _owner);
+        Topic r = _owner.GetI(pName, forWrite, _owner, true);
         if(r == null) {
           return JSObject.Undefined;
         }
@@ -363,8 +363,8 @@ namespace X13.PLC {
         if(_owner == null) {
           return;
         }
-        Topic r = _owner.Get(name.ToString(), true, _owner);
-        r.Set(value.Clone(), _owner);
+        Topic r = _owner.GetI(name.ToString(), true, _owner, true);
+        r.SetI(value.Clone(), _owner);
       } else {
         base.SetMember(name, value, strict);
       }
@@ -408,13 +408,13 @@ namespace X13.PLC {
             X13.lib.Log.Warning("{0}[{1}] declarer not found", _owner.path, _funcName);
           } else {
             foreach(var p in _decl.pins.Where(z => z.Value.mandatory)) {
-              Topic t=_owner.Get(p.Key, true, _owner);
+              Topic t=_owner.GetI(p.Key, true, _owner, true);
               if(p.Value.defaultValue!=null && t.vType==null) {
                 t.Set(p.Value.defaultValue, _owner);
               }
             }
           }
-          _owner.children.changed += children_changed;
+          _owner.children.Subsribe(children_changed, true);
         }
       }
     }
@@ -479,6 +479,7 @@ namespace X13.PLC {
       } else {
         image=null;
       }
+      X13.lib.Log.Debug("PiDeclarer OK");
     }
 
     public void Init(PiBlock This) {

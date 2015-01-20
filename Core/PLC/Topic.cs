@@ -88,7 +88,7 @@ namespace X13.PLC {
         if(_flags[0]!=value) {
           _flags[0]=value;
           var c=Perform.Create(this, Perform.Art.changed, null);
-          PLC.instance.DoCmd(c);
+          PLC.instance.DoCmd(c, false);
         }
       }
     }
@@ -103,7 +103,7 @@ namespace X13.PLC {
         if(_flags[4]!=value) {
           _flags[4]=value;
           var c=Perform.Create(this, Perform.Art.changed, null);
-          PLC.instance.DoCmd(c);
+          PLC.instance.DoCmd(c, false);
         }
       }
     }
@@ -113,6 +113,9 @@ namespace X13.PLC {
     /// <param name="create">true - create, false - check</param>
     /// <returns>item or null</returns>
     public Topic Get(string path, bool create=true, Topic prim=null) {
+      return GetI(path, create, prim, false);
+    }
+    internal Topic GetI(string path, bool create, Topic prim, bool inter) {
       if(string.IsNullOrEmpty(path)) {
         return this;
       }
@@ -151,7 +154,7 @@ namespace X13.PLC {
                 next=new Topic(home, pt[i]);
                 home._children[pt[i]]=next;
                 var c=Perform.Create(next, Perform.Art.create, prim);
-                PLC.instance.DoCmd(c);
+                PLC.instance.DoCmd(c, inter);
               }
             }
           } else {
@@ -163,14 +166,14 @@ namespace X13.PLC {
       return home;
     }
     public bool Exist(string path) {
-      return Get(path, false)!=null;
+      return GetI(path, false, null, false)!=null;
     }
     public bool Exist(string path, out Topic topic) {
-      return (topic=Get(path, false))!=null;
+      return (topic=GetI(path, false, null, false))!=null;
     }
     public void Remove(Topic prim=null) {
       var c=Perform.Create(this, Perform.Art.remove, prim);
-      PLC.instance.DoCmd(c);
+      PLC.instance.DoCmd(c, false);
     }
     public Topic Move(Topic nParent, string nName, Topic prim=null) {
       if(nParent==null) {
@@ -188,7 +191,7 @@ namespace X13.PLC {
       }
       var c=Perform.Create(this, Perform.Art.move, prim);
       c.o=dst;
-      PLC.instance.DoCmd(c);
+      PLC.instance.DoCmd(c, false);
       return dst;
     }
     public override string ToString() {
@@ -213,15 +216,23 @@ namespace X13.PLC {
     }
     public void Set(object val, Topic prim=null) {
       var c=Perform.Create(this, val, prim);
-      PLC.instance.DoCmd(c);
-      //}
+      PLC.instance.DoCmd(c, false);
     }
-
+    internal void SetI(object val, Topic prim=null) {
+      var c=Perform.Create(this, val, prim);
+      PLC.instance.DoCmd(c, true);
+    }
     public void SetJson(string json, Topic prim=null) {
       var c=Perform.Create(this, Perform.Art.setJson, prim);
       c.o=json;
-      PLC.instance.DoCmd(c);
+      PLC.instance.DoCmd(c, false);
     }
+    internal void SetIJson(string json, Topic prim=null) {
+      var c=Perform.Create(this, Perform.Art.setJson, prim);
+      c.o=json;
+      PLC.instance.DoCmd(c, true);
+    }
+
     public string ToJson() {
       if(_json==null) {
         lock(this) {
@@ -240,16 +251,13 @@ namespace X13.PLC {
 
     public event Action<Topic, Perform> changed {
       add {
-        var c=Perform.Create(this, Perform.Art.subscribe, this);
-        c.o=value;
-        c.i=0;
-        PLC.instance.DoCmd(c);
+        Subscribe(value, false);
       }
       remove {
         var c=Perform.Create(this, Perform.Art.unsubscribe, this);
         c.o=value;
         c.i=0;
-        PLC.instance.DoCmd(c);
+        PLC.instance.DoCmd(c, (value!=null && value.Target is PlcItem));
       }
     }
 
@@ -284,6 +292,12 @@ namespace X13.PLC {
       if(!this._subRecords.Exists(z => z.f==sr.f && z.mask==sr.mask)) {
         this._subRecords.Add(sr);
       }
+    }
+    internal void Subscribe(Action<Topic, Perform> func, bool intern) {
+      var c=Perform.Create(this, Perform.Art.subscribe, this);
+      c.o=func;
+      c.i=0;
+      PLC.instance.DoCmd(c, intern);
     }
     internal void Unsubscribe(string mask, Action<Topic, Perform> f) {
       if(this._subRecords!=null) {
@@ -337,17 +351,20 @@ namespace X13.PLC {
       }
       public event Action<Topic, Perform> changed {
         add {
-          Perform c=Perform.Create(_home, Perform.Art.subscribe, _home);
-          c.o=value;
-          c.i=_deep?2:1;
-          PLC.instance.DoCmd(c);
+          Subsribe(value, false);
         }
         remove {
           Perform c=Perform.Create(_home, Perform.Art.unsubscribe, _home);
           c.o=value;
           c.i=_deep?2:1;
-          PLC.instance.DoCmd(c);
+          PLC.instance.DoCmd(c, (value!=null && value.Target is PlcItem));
         }
+      }
+      internal void Subsribe(Action<Topic, Perform> f, bool intern) {
+        Perform c=Perform.Create(_home, Perform.Art.subscribe, _home);
+        c.o=f;
+        c.i=_deep?2:1;
+        PLC.instance.DoCmd(c, intern);
       }
       System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
         return GetEnumerator();

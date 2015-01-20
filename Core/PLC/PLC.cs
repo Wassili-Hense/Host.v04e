@@ -170,6 +170,7 @@ namespace X13.PLC {
       if(Interlocked.CompareExchange(ref _busyFlag, 2, 1) != 1) {
         return;
       }
+      var qc=_tcQueue.Count();
       Perform cmd;
       _pfPos = 0;
       while(_tcQueue.TryDequeue(out cmd)) {
@@ -179,8 +180,8 @@ namespace X13.PLC {
         TickStep1(cmd);
       }
 
-      for(_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
-        TickStep2(_prOp[_pfPos]);
+      for(int i = 0; i < _prOp.Count; i++) {
+        TickStep2(_prOp[i]);
       }
 
       for(_pfPos = 0; _pfPos < _prOp.Count; _pfPos++) {
@@ -216,6 +217,7 @@ namespace X13.PLC {
         }
         _rLayerVars.Clear();
       }
+      X13.lib.Log.Debug("PLC.Tick QC={0}, PC={1}", qc, _prOp.Count);
       _prOp.Clear();
       _busyFlag = 1;
     }
@@ -435,46 +437,40 @@ namespace X13.PLC {
       }
       Topic.root.disposed = false;
     }
-    internal void DoCmd(Perform cmd) {
-      if(cmd.prim==null || (cmd.prim._value as PlcItem)==null) {
-        _tcQueue.Enqueue(cmd);
-      } else {
-        int idx = _prOp.BinarySearch(cmd);
-        if(idx < 0) {
-          idx = ~idx;
-          if(idx <= _pfPos) {
-            _tcQueue.Enqueue(cmd);               // Published in next tick
-            return;
-          }
+    internal void DoCmd(Perform cmd, bool intern) {
+      if(intern) {
+        if(_prOp.Count>0 && (_pfPos>=_prOp.Count || (((int)_prOp[_pfPos].art)>>2)>(((int)cmd.art)>>2) || _prOp[_pfPos].layer>cmd.layer)) {
+          _tcQueue.Enqueue(cmd);               // Published in next tick
         } else {
-          if(idx <= _pfPos) {
-            _tcQueue.Enqueue(cmd);               // Published in next tick
-            return;
-          }
-          var oCmd = _prOp[idx];
-          if(oCmd.art == Perform.Art.changed) {
-            cmd.old_o = oCmd.old_o;
-          }
+          TickStep1(cmd);
+          TickStep2(cmd);
         }
-        TickStep1(cmd);
-        TickStep2(cmd);
+      } else {
+        _tcQueue.Enqueue(cmd);
       }
     }
 
     private int EnquePerf(Perform cmd) {
-      int idx = _prOp.BinarySearch(cmd);
-      if(idx < 0) {
-        idx = ~idx;
-        _prOp.Insert(idx, cmd);
-      } else {
-        var a1 = (int)_prOp[idx].art;
-        if(((int)cmd.art) >= a1) {
-          _prOp[idx] = cmd;
-        } else {
-          idx = ~idx;
+      int i;
+      for(i=0; i<_prOp.Count; i++) {
+        if((((int)_prOp[i].art)>>2)==(((int)cmd.art)>>2) && _prOp[i].src==cmd.src && ((cmd.art!=Perform.Art.subscribe && cmd.art!=Perform.Art.unsubscribe) || _prOp[i].o!=cmd.o)) {
+          i=~i;
+          break;
         }
       }
-      return idx;
+      if(i<0) {
+        i=~i;
+        var oCmd=_prOp[i];
+        if(oCmd.art==Perform.Art.changed) {
+          cmd.old_o=oCmd.old_o;
+        }
+        _prOp[i] = cmd;
+
+      } else {
+        i = ~_prOp.BinarySearch(cmd);
+        _prOp.Insert(i, cmd);
+      }
+      return i;
     }
     internal void AddBlock(PiBlock bl) {
       _blocks.Add(bl);

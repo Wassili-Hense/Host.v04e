@@ -5,20 +5,7 @@ using System.Text;
 
 namespace X13.PLC {
   public class Perform: IComparable<Perform> {
-    private static int[] _prio;
 
-    static Perform() {
-      //create=1,         1
-      //subscribe=2,      2  
-      //unsubscribe=3,    2
-      //set=4,            3
-      //setJson=5,        3
-      //changed=6,        3
-      //move=7,           4
-      //remove=8          4
-      _prio=new int[] { 0, 1, 2, 2, 3, 3, 3, 4, 4 };
-
-    }
     internal static Perform Create(Topic src, object val, Topic prim) {
       Perform r;
       if(val!=null && val.GetType()==typeof(Art)) {
@@ -58,26 +45,25 @@ namespace X13.PLC {
       if(other==null) {
         return -1;
       }
-      if(this.layer!=other.layer) {
-        return this.layer.CompareTo(other.layer);
+      int p1=((int)this.art)>>2;
+      int p2=(int)(other.art)>>2;
+      if(p1!=p2) {
+        return p1.CompareTo(p2);
       }
-      if(this.src.path!=other.src.path) {
-        return this.src.path.CompareTo(other.src.path);
-      }
-      return _prio[((int)this.art)].CompareTo(_prio[(int)(other.art)]);
+      return this.layer>other.layer?1:-1;
     }
     public override string ToString() {
       return string.Concat(src.path, "[", art.ToString(), ", ", layer.ToString() , "]=", o==null?"null":o.ToString());
     }
     public enum Art {
       create=1,
-      subscribe=2,
-      unsubscribe=3,
       set=4,
       setJson=5,
       changed=6,
-      move=7,
-      remove=8
+      subscribe=8,
+      unsubscribe=12,
+      move=16,
+      remove=17
     }
   }
 }
