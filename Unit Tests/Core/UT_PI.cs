@@ -9,18 +9,16 @@ namespace UnitTests.Core {
   [TestClass]
   public class UT_PI {
     private static Topic root;
+    private static string logFile;
     [ClassInitialize()]
     public static void MyClassInitialize(TestContext testContext) {
       root=Topic.root;
-      if(!System.IO.Directory.Exists("../log")) {
-        System.IO.Directory.CreateDirectory("../log");
-      }
-      System.IO.File.Delete("../log/UI_PI.log");
+      logFile="PI_"+DateTime.Now.ToString("dd_HHmmss")+".log";
       X13.lib.Log.Write+=Log_Write;
     }
 
     static void Log_Write(X13.lib.LogLevel ll, DateTime dt, string msg) {
-      System.IO.File.AppendAllText("../log/UI_PI.log", string.Concat(dt.ToString("HH:mm:ss.ff"), " [", ll.ToString().Substring(0, 1), "] ", msg, "\r\n"));
+      System.IO.File.AppendAllText(logFile, string.Concat(dt.ToString("HH:mm:ss.ff"), " [", ll.ToString().Substring(0, 1), "] ", msg, "\r\n"));
     }
 
     [TestInitialize()]
@@ -30,6 +28,8 @@ namespace UnitTests.Core {
     }
     private void DefInc() {
       Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/DEC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
     }
     [TestMethod]
     public void T01() {
@@ -431,93 +431,100 @@ namespace UnitTests.Core {
       json=l1_t.ToJson();
       Assert.AreEqual("{\"$type\":\"PiLink\",\"i\":\"v1_alias\",\"o\":\"v2\"}", json);
     }
-    /// <summary>SetJson, Block(INC, A=alias, Q=alias)</summary>
+    /// <summary>Block(INC, A=alias, Q=alias), Block(MOD, A=A01/Q, B=7, Q=>alias)</summary>
     [TestMethod]
     public void T24() {
       DefInc();
       var p = Topic.root.Get("/plc24");
+
+      var v1=p.Get("v1");
       var k1_t=p.Get("v1_alias");
-      k1_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v1\"}");
+      k1_t.value=new PiAlias(v1);
+
+      var a01 = new PiBlock("INC");
+      var a01_t = p.Get("A01");
+      a01_t.value = a01;
+
+      p.Get("w001").value=new PiLink(k1_t, a01_t.Get("A"));
+
+      var v2=p.Get("v2");
       var k2_t=p.Get("v2_alias");
-      k2_t.SetJson("{\"$type\":\"PiAlias\",\"alias\":\"/plc24/v2\"}");
-      var a1_t = p.Get("A01");
-      a1_t.SetJson("{\"$type\":\"PiBlock\",\"func\":\"INC\"}");
-      var l1_t=p.Get("w001");
-      l1_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"v1_alias\",\"o\":\"A01/A\"}");
-      var l2_t=p.Get("w002");
-      l2_t.SetJson("{\"$type\":\"PiLink\",\"i\":\"A01/Q\",\"o\":\"v2_alias\"}");
-      p.Get("v1").value=28.3;
+      k2_t.value=new PiAlias(v2);
+
+      p.Get("w002").value=new PiLink(a01_t.Get("Q"), k2_t);
+
+      v1.value=28.3;
       PLC.instance.Tick();
       PLC.instance.Tick();
-      var a1=a1_t.As<PiBlock>();
-      Assert.AreEqual(2, a1._pins["A"].layer);
-      Assert.AreEqual(3, a1.layer);
-      Assert.AreEqual(3, a1._pins["Q"].layer);
-      var v2=a1_t.Get("../v2");
+      Assert.AreEqual(2, a01._pins["A"].layer);
+      Assert.AreEqual(3, a01.layer);
+      Assert.AreEqual(3, a01._pins["Q"].layer);
       Assert.AreEqual(29.3, v2.As<double>());
 
       PLC.Export("T24.xst", Topic.root);
 
-      p.Get("v1").value=1023;
+      v1.value=1023;
       PLC.instance.Tick();
       Assert.AreEqual(1024, v2.As<int>());
 
-    }
-    [TestMethod]
-    public void T25() {
-      X13.lib.Log.Info("T25");
-      PLC.Import("T24.xst");
-      PLC.instance.Tick();
-      PLC.instance.Tick();
-      var p = Topic.root.Get("/plc24");
-      var a1=p.Get("A01").As<PiBlock>();
-      Assert.AreEqual(2, a1._pins["A"].layer);
-      Assert.AreEqual(3, a1.layer);
-      Assert.AreEqual(3, a1._pins["Q"].layer);
-      var v2=p.Get("v2");
-      Assert.AreEqual(29.3, v2.As<double>());
-      Assert.AreEqual(2, a1._pins["A"].layer);
-      Assert.AreEqual(3, a1.layer);
-      Assert.AreEqual(3, a1._pins["Q"].layer);
-
-      p.Get("v1").value=-0.55;
-      PLC.instance.Tick();
-      Assert.AreEqual<double>((-0.55+1), v2.As<double>());
-
-      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
-
-      var a02 = new PiBlock("INC");
+      var a02 = new PiBlock("MOD");
       var a02_t = p.Get("A02");
-      //var a02=a02_t.As<PiBlock>();
-      var a02_a_t = a02_t.Get("A");
-      //var a02_b_t = a02_t.Get("B");
+      var a02_b_t=a02_t.Get("B");
       var a02_q_t=a02_t.Get("Q");
       a02_t.value = a02;
-
-      var a01_q=p.Get("A01/Q");
-      var l3_v=new PiLink(a01_q, a02_a_t);
-      var l3_t=p.Get("w003");
-      l3_t.value=l3_v;
 
       var v3=p.Get("v3");
       var k3_t=p.Get("v3_alias");
       k3_t.value=new PiAlias(v3);
 
-      var l4_v=new PiLink(a02_q_t, k3_t);
-      var l4_t=p.Get("w004");
-      l4_t.value=l4_v;
+      p.Get("w003").value=new PiLink(a01_t.Get("Q"), a02_t.Get("A"));
+      p.Get("w004").value=new PiLink(a02_t.Get("Q"), k3_t);
 
-      p.Get("v1").value=19;
-      //a02_b_t.value=7;
+      v1.value=19;
+      a02_b_t.value=7;
+
       PLC.instance.Tick();
       PLC.instance.Tick();
+
       Assert.AreEqual(4, a02._pins["A"].layer);
-      //Assert.AreEqual(1, a02._pins["B"].layer);
       Assert.AreEqual(5, a02.layer);
       Assert.AreEqual(5, a02._pins["Q"].layer);
+      Assert.AreEqual(6, v3.As<int>());
 
-      Assert.AreEqual(21, v3.As<int>());
-      //PLC.Export("T25.xst", Topic.root);
+      PLC.Export("T24.xst", Topic.root);
+    }
+    [TestMethod]
+    public void T25() {
+      PLC.Import("T25.xst");
+      PLC.instance.Tick();
+      var p = Topic.root.Get("/plc25");
+      var v1=p.Get("v1");
+      var v3=p.Get("v3");
+      var w=new System.Diagnostics.Stopwatch();
+      w.Start();
+      for(int i=0; i<500; i++) {
+        v1.value=i;
+        PLC.instance.Tick();
+        Assert.AreEqual((i+1)%7, v3.As<int>());
+      }
+      w.Stop();
+      X13.lib.Log.Info("T25 time={0}", w.Elapsed.TotalMilliseconds);
+
+      var a03 = new PiBlock("DEC");
+      var a03_t = p.Get("A03");
+      a03_t.value = a03;
+
+      var k3_t=p.Get("v3_alias");
+
+      p.Get("w004").value=new PiLink(a03_t.Get("Q"), k3_t);
+      p.Get("w005").value=new PiLink(p.Get("A02/Q"), a03_t.Get("A"));
+
+      PLC.instance.Tick();
+      Assert.AreEqual(((499+1)%7)-1, v3.As<int>());
+
+      v1.value=12;
+      PLC.instance.Tick();
+      Assert.AreEqual(5, v3.As<int>());
     }
   }
 }

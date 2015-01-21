@@ -50,7 +50,7 @@ namespace X13.PLC {
             throw new ArgumentException(string.Format("{0} already hat source {1}", owner.path, _src));
           }
           _src=i;
-          owner.saved=false;
+          owner.SetFlagI(0, false);
         }
       } else if((l=i as PiLink)!=null) {
         if(l.output==this) {
@@ -58,7 +58,7 @@ namespace X13.PLC {
             throw new ArgumentException(string.Format("{0} already hat source {1}", owner.path, _src));
           }
           _src=i;
-          owner.saved=false;
+          owner.SetFlagI(0, false);
         }
       }
     }
@@ -68,7 +68,7 @@ namespace X13.PLC {
         block=null;
       }
       if(i==_src) {
-        owner.saved=true;
+        owner.SetFlagI(0, true);
         _src=null;
       }
       if(_cont.Count==0) {
@@ -216,7 +216,7 @@ namespace X13.PLC {
             al.DelLink(this);
           }
           input.DelCont(this);
-          if((al = _ipTopic.As<PiAlias>()) != null) {
+          if((al = _opTopic.As<PiAlias>()) != null) {
             al.DelLink(this);
           }
           output.DelCont(this);

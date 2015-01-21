@@ -121,7 +121,7 @@ namespace X13.PLC {
       foreach(var xNext in doc.Root.Elements("item")) {
         Import(xNext, owner);
       }
-      owner.saved=doc.Root.Attribute("saved")!=null && doc.Root.Attribute("saved").Value!=bool.FalseString;
+      owner.SetFlagI(0, doc.Root.Attribute("saved")!=null && doc.Root.Attribute("saved").Value!=bool.FalseString);
       if(doc.Root.Attribute("value")!=null) {
         owner.SetJson(doc.Root.Attribute("value").Value);
       }
@@ -153,7 +153,7 @@ namespace X13.PLC {
       foreach(var xNext in xElement.Elements("item")) {
         Import(xNext, cur);
       }
-      cur.saved=xElement.Attribute("saved")!=null && xElement.Attribute("saved").Value!=bool.FalseString;
+      cur.SetFlagI(0, xElement.Attribute("saved")!=null && xElement.Attribute("saved").Value!=bool.FalseString);
       if(xElement.Attribute("value")!=null) {
         cur.SetJson(xElement.Attribute("value").Value);
       }
@@ -204,8 +204,8 @@ namespace X13.PLC {
         }
         if(cmd.art != Perform.Art.set) {
           cmd.src.Publish(cmd);
-          X13.lib.Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
         }
+        X13.lib.Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
         //if(cmd.src.disposed) {
         //  cmd.src._flags[3]=true;
         //}
@@ -321,14 +321,15 @@ namespace X13.PLC {
             EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
           }
 
-          int idx = EnquePerf(c);
-          if(idx > 0) {
-            Perform c1 = _prOp[idx - 1];
-            if(c1.src == c.src && c1.art == Perform.Art.set) {
-              var p = Perform.Create(t, Perform.Art.set, c1.prim);
+          int idx = EnquePerf(c)-1;
+          while(idx >= 0) {
+            Perform c1 = _prOp[idx--];
+            if(c1.src == c.src && (c1.art == Perform.Art.set || c1.art==Perform.Art.set)) {
+              var p = Perform.Create(t, c1.art, c1.prim);
               p.o = c1.o;
               p.i = c1.i;
               EnquePerf(p);
+              break;
             }
           }
         }
@@ -439,7 +440,7 @@ namespace X13.PLC {
     }
     internal void DoCmd(Perform cmd, bool intern) {
       if(intern) {
-        if(_prOp.Count>0 && (_pfPos>=_prOp.Count || (((int)_prOp[_pfPos].art)>>2)>(((int)cmd.art)>>2) || _prOp[_pfPos].layer>cmd.layer)) {
+        if(_prOp.Count>0 && (_pfPos>=_prOp.Count || _prOp[_pfPos].layer>cmd.layer)) {
           _tcQueue.Enqueue(cmd);               // Published in next tick
         } else {
           TickStep1(cmd);
@@ -453,23 +454,22 @@ namespace X13.PLC {
     private int EnquePerf(Perform cmd) {
       int i;
       for(i=0; i<_prOp.Count; i++) {
-        if((((int)_prOp[i].art)>>2)==(((int)cmd.art)>>2) && _prOp[i].src==cmd.src && ((cmd.art!=Perform.Art.subscribe && cmd.art!=Perform.Art.unsubscribe) || _prOp[i].o!=cmd.o)) {
-          i=~i;
+        if(_prOp[i].EqualsGr(cmd)) { 
+          if(_prOp[i].EqualsEx(cmd)) {
+            return i;
+          }
+          if(_prOp[i].art==Perform.Art.changed) {
+            cmd.old_o=_prOp[i].old_o;
+          }
+          _prOp.RemoveAt(i);
+          if(_pfPos>=i) {
+            _pfPos--;
+          }
           break;
         }
       }
-      if(i<0) {
-        i=~i;
-        var oCmd=_prOp[i];
-        if(oCmd.art==Perform.Art.changed) {
-          cmd.old_o=oCmd.old_o;
-        }
-        _prOp[i] = cmd;
-
-      } else {
-        i = ~_prOp.BinarySearch(cmd);
-        _prOp.Insert(i, cmd);
-      }
+      i = ~_prOp.BinarySearch(cmd);
+      _prOp.Insert(i, cmd);
       return i;
     }
     internal void AddBlock(PiBlock bl) {
@@ -502,11 +502,12 @@ namespace X13.PLC {
               continue;
             }
             v1.layer = 1;
+            //X13.lib.Log.Debug("{0}.SetLayer({1})", v1, v1.layer);
           }
           foreach(var l in v1._cont.Select(z => z as PiLink).Where(z => z!=null && z.input == v1)) {
             l.layer = v1.layer+1;
             l.output.layer = l.layer;
-            X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", l.output, l.layer, v1);
+            //X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", l.output, l.layer, v1);
             l.output.calcPath = v1.calcPath;
             vQu.Enqueue(l.output);
           }
@@ -514,7 +515,7 @@ namespace X13.PLC {
             if(v1.calcPath.Contains(v1.block)) {
               if(v1.layer > 0) {
                 v1.layer = -v1.layer;
-                X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v1, v1.layer, v1.block);
+                //X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v1, v1.layer, v1.block);
               }
               X13.lib.Log.Debug("{0} make loop", v1.owner.path);
             } else if(v1.block._pins.Where(z => v1.block._decl.pins[z.Key].ip).All(z => z.Value.layer >= 0)) {
@@ -522,7 +523,7 @@ namespace X13.PLC {
               v1.block.calcPath = v1.block.calcPath.Union(v1.calcPath).ToArray();
               foreach(var v3 in v1.block._pins.Where(z => v1.block._decl.pins[z.Key].op).Select(z => z.Value)) {
                 v3.layer = v1.block.layer;
-                X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, v1);
+                //X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, v1);
                 v3.calcPath = v1.block.calcPath;
                 if(!vQu.Contains(v3)) {
                   vQu.Enqueue(v3);
@@ -540,7 +541,7 @@ namespace X13.PLC {
           bl.layer = bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
           foreach(var v3 in bl._pins.Where(z => bl._decl.pins[z.Key].op).Select(z => z.Value)) {
             v3.layer = bl.layer;
-            X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);
+            //X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);
             v3.calcPath = bl.calcPath;
             if(!vQu.Contains(v3)) {
               vQu.Enqueue(v3);

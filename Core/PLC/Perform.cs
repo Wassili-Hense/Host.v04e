@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NiL.JS.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -45,25 +46,58 @@ namespace X13.PLC {
       if(other==null) {
         return -1;
       }
-      int p1=((int)this.art)>>2;
-      int p2=(int)(other.art)>>2;
-      if(p1!=p2) {
-        return p1.CompareTo(p2);
+      if(this.layer!=other.layer) {
+        return this.layer>other.layer?1:-1;
       }
-      return this.layer>other.layer?1:-1;
+      if(this.src==other.src) {
+        int p1=((int)this.art)>>2;
+        int p2=(int)(other.art)>>2;
+        if(p1!=p2) {
+          return p1.CompareTo(p2);
+        }
+      }
+      return -1;
     }
     public override string ToString() {
       return string.Concat(src.path, "[", art.ToString(), ", ", layer.ToString() , "]=", o==null?"null":o.ToString());
     }
     public enum Art {
       create=1,
-      set=4,
-      setJson=5,
-      changed=6,
-      subscribe=8,
-      unsubscribe=12,
+      subscribe=4,
+      unsubscribe=8,
+      set=12,
+      setJson=13,
+      changed=14,
       move=16,
       remove=17
+    }
+
+    public bool EqualsEx(Perform other) {
+      JSObject o1, o2;
+      if((this.art==other.art || (this.art==Art.changed && other.art<Art.changed))) {
+        if(this.o==null){
+          return other.o==null;
+        } else if((o1=this.o as JSObject)!=null && (o2=other.o as JSObject)!=null){
+          if(o1.ValueType==o2.ValueType) {
+            return o1.Value==o2.Value;
+          }
+          return false;
+        } else {
+          return this.o.Equals(other.o);
+        }
+      }
+      return false;
+    }
+
+    internal bool EqualsGr(Perform other) {
+      if(other!=null && this.src==other.src && (((int)this.art)>>2)==(((int)other.art)>>2)) {
+        if(this.art==Art.subscribe || this.art==Art.unsubscribe) {
+          return this.o==other.o;
+        }
+        return true;
+      }
+      return false;
+
     }
   }
 }

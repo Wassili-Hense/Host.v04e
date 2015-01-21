@@ -165,6 +165,9 @@ namespace X13.PLC {
       }
       return home;
     }
+    internal void SetFlagI(int fl, bool value) {
+      _flags[fl]=value;
+    }
     public bool Exist(string path) {
       return GetI(path, false, null, false)!=null;
     }
