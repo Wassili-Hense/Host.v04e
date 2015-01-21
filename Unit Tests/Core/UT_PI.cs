@@ -455,7 +455,6 @@ namespace UnitTests.Core {
 
       v1.value=28.3;
       PLC.instance.Tick();
-      PLC.instance.Tick();
       Assert.AreEqual(2, a01._pins["A"].layer);
       Assert.AreEqual(3, a01.layer);
       Assert.AreEqual(3, a01._pins["Q"].layer);
@@ -500,15 +499,17 @@ namespace UnitTests.Core {
       var p = Topic.root.Get("/plc25");
       var v1=p.Get("v1");
       var v3=p.Get("v3");
-      var w=new System.Diagnostics.Stopwatch();
-      w.Start();
-      for(int i=0; i<500; i++) {
+      int i=499;
+      //var w=new System.Diagnostics.Stopwatch();
+      //w.Start();
+      //for(i=0; i<500; i++) 
+      {
         v1.value=i;
         PLC.instance.Tick();
         Assert.AreEqual((i+1)%7, v3.As<int>());
       }
-      w.Stop();
-      X13.lib.Log.Info("T25 time={0}", w.Elapsed.TotalMilliseconds);
+      //w.Stop();
+      //X13.lib.Log.Info("T25 time={0}", w.Elapsed.TotalMilliseconds);
 
       var a03 = new PiBlock("DEC");
       var a03_t = p.Get("A03");
@@ -520,7 +521,7 @@ namespace UnitTests.Core {
       p.Get("w005").value=new PiLink(p.Get("A02/Q"), a03_t.Get("A"));
 
       PLC.instance.Tick();
-      Assert.AreEqual(((499+1)%7)-1, v3.As<int>());
+      Assert.AreEqual(((i+1)%7)-1, v3.As<int>());
 
       v1.value=12;
       PLC.instance.Tick();

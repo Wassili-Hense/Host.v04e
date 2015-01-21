@@ -276,7 +276,12 @@ namespace X13.PLC {
           return;
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
-          output.owner.SetI(input.owner._value.Clone(), _owner);
+          output.owner._value=input.owner._value;
+          if(p.art==Perform.Art.changed && src==input.owner) {
+            var c=Perform.Create(output.owner, Perform.Art.changed, this.owner);
+            c.o=input.owner._value;
+            PLC.instance.DoCmd(c, true);
+          }
         }
       }
     }

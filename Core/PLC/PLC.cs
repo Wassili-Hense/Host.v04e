@@ -206,6 +206,7 @@ namespace X13.PLC {
           cmd.src.Publish(cmd);
         }
         X13.lib.Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
+
         //if(cmd.src.disposed) {
         //  cmd.src._flags[3]=true;
         //}
@@ -228,6 +229,7 @@ namespace X13.PLC {
       case Perform.Art.create:
         if((t = c.src.parent) != null) {
           //t._children[c.src.name]=c.src;
+          //TODO: think
           if(t._subRecords != null) {
             foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
               c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });

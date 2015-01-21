@@ -73,31 +73,15 @@ namespace X13.PLC {
     }
 
     public bool EqualsEx(Perform other) {
-      JSObject o1, o2;
-      if((this.art==other.art || (this.art==Art.changed && other.art<Art.changed))) {
-        if(this.o==null){
-          return other.o==null;
-        } else if((o1=this.o as JSObject)!=null && (o2=other.o as JSObject)!=null){
-          if(o1.ValueType==o2.ValueType) {
-            return o1.Value==o2.Value;
-          }
-          return false;
-        } else {
-          return this.o.Equals(other.o);
-        }
-      }
-      return false;
+      return (this.art==other.art || (this.art==Art.changed && other.art<Art.changed) 
+        && object.Equals(this.o, other.o));
     }
 
     internal bool EqualsGr(Perform other) {
-      if(other!=null && this.src==other.src && (((int)this.art)>>2)==(((int)other.art)>>2)) {
-        if(this.art==Art.subscribe || this.art==Art.unsubscribe) {
-          return this.o==other.o;
-        }
-        return true;
-      }
-      return false;
-
+      return other!=null 
+        && this.src==other.src 
+        && (((int)this.art)>>2)==(((int)other.art)>>2) 
+        && ((this.art!=Art.subscribe && this.art!=Art.unsubscribe) || object.Equals(this.o, other.o));
     }
   }
 }
