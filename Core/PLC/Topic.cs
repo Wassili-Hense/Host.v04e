@@ -260,7 +260,7 @@ namespace X13.PLC {
         var c=Perform.Create(this, Perform.Art.unsubscribe, this);
         c.o=value;
         c.i=0;
-        PLC.instance.DoCmd(c, (value!=null && value.Target is PlcItem));
+        PLC.instance.DoCmd(c, false);
       }
     }
 
@@ -360,7 +360,7 @@ namespace X13.PLC {
           Perform c=Perform.Create(_home, Perform.Art.unsubscribe, _home);
           c.o=value;
           c.i=_deep?2:1;
-          PLC.instance.DoCmd(c, (value!=null && value.Target is PlcItem));
+          PLC.instance.DoCmd(c, false);
         }
       }
       internal void Subsribe(Action<Topic, Perform> f, bool intern) {

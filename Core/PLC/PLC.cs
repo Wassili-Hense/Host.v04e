@@ -39,6 +39,11 @@ namespace X13.PLC {
       if(Topic.root.children.Any()) {
         this.Clear();
       }
+      _blocks.Clear();
+      _vars.Clear();
+      _knownTypes.Clear();
+      _prOp.Clear();
+
       _knownTypes["PiAlias"]=(j, s, p) => new PiAlias(j, s, p);
       _knownTypes["PiLink"]=(j, s, p) => new PiLink(j, s, p);
       _knownTypes["PiBlock"]=(j, s, p) => new PiBlock(j, s, p);
@@ -206,17 +211,17 @@ namespace X13.PLC {
           cmd.src.Publish(cmd);
         }
         X13.lib.Log.Debug("$ {0} [{1}, {2}] i={3}", cmd.src.path, cmd.art, (cmd.o??"null"), cmd.prim==null?string.Empty:cmd.prim.path);
+        if(_rLayerVars.Any()) {
+          CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer!=0).Union(_rLayerVars.Where(z => !z.ip))));
+          if(_rLayerVars.Any(z => z.layer == 0)) {
+            CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer == 0)));
+          }
+          _rLayerVars.Clear();
+        }
 
         //if(cmd.src.disposed) {
         //  cmd.src._flags[3]=true;
         //}
-      }
-      if(_rLayerVars.Any()) {
-        CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer!=0).Union(_rLayerVars.Where(z => !z.ip))));
-        if(_rLayerVars.Any(z => z.layer == 0)) {
-          CalcLayers(new Queue<PiVar>(_rLayerVars.Where(z => z.layer == 0)));
-        }
-        _rLayerVars.Clear();
       }
       X13.lib.Log.Debug("PLC.Tick QC={0}, PC={1}", qc, _prOp.Count);
       _prOp.Clear();
@@ -500,10 +505,15 @@ namespace X13.PLC {
           v1 = vQu.Dequeue();
           if(v1.layer == 0) {
             v1.calcPath = new PiBlock[0];
-            if(v1.block != null && v1.block.layer == 0 && v1.block._decl.pins[v1.owner.name].op) {
-              continue;
+            if(v1._src!=null) {
+              if(v1._src.layer == 0) {
+                continue;
+              } else {
+                v1.layer=v1.block.layer;
+              }
+            } else {
+              v1.layer = 1;
             }
-            v1.layer = 1;
             //X13.lib.Log.Debug("{0}.SetLayer({1})", v1, v1.layer);
           }
           foreach(var l in v1._cont.Select(z => z as PiLink).Where(z => z!=null && z.input == v1)) {
@@ -539,8 +549,15 @@ namespace X13.PLC {
           foreach(var ip in bl._pins.Select(z => z.Value).Where(z => z.ip && z.layer > 0)) {
             bl.calcPath = bl.calcPath.Union(ip.calcPath).ToArray();
           }
-
-          bl.layer = bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
+          {
+            var pl=bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0);
+            if(pl.Any()) {
+              bl.layer=pl.Max(z => z.Value.layer) + 1;
+            } else{
+              bl.layer=1;
+            }
+          }
+          //bl.layer = bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0).Max(z => z.Value.layer) + 1;
           foreach(var v3 in bl._pins.Where(z => bl._decl.pins[z.Key].op).Select(z => z.Value)) {
             v3.layer = bl.layer;
             //X13.lib.Log.Debug("{0}.SetLayer({1}) <- {2}", v3, v3.layer, bl);

@@ -11,18 +11,18 @@ using System.Text;
 namespace X13.PLC {
   internal interface PlcItem : ITenant {
     void changed(Topic src, Perform p);
+    int layer { get; }
   }
 
   internal class PiVar {
     public readonly Topic owner;
 
-    private PlcItem _src;
+    public PlcItem _src;
     public bool ip { get { return _src!=null; } }
     public int layer;
     public PiBlock[] calcPath;
     public List<PlcItem> _cont;
     public PiBlock block { get; private set; }
-
 
     public PiVar(Topic src) {
       owner = src;
@@ -87,13 +87,22 @@ namespace X13.PLC {
 
     public bool ip;
     public bool op;
-    public PiVar origin;
+    private PiVar _origin;
+    private Topic _tOrigin;
 
+    public PiVar origin {
+      get {
+        if(_origin==null) {
+          _origin=PLC.instance.GetVar(_tOrigin, true);
+        }
+        return _origin;
+      }
+    }
     public PiAlias(JSObject jso, Topic src, Topic prim)
       : this(src.GetI(jso["alias"].As<string>(), true, prim, true)) {
     }
     public PiAlias(Topic tOrigin) {
-      origin=PLC.instance.GetVar(tOrigin, true);
+      _tOrigin=tOrigin;
       links=new List<PiLink>();
     }
     [Hidden]
@@ -120,6 +129,9 @@ namespace X13.PLC {
       }
       [Hidden]
       set {
+        if(_owner==value) {
+          return;
+        }
         if(_owner!=null) {
           _owner.changed-=_owner_changed;
           origin.DelCont(this);
@@ -143,6 +155,11 @@ namespace X13.PLC {
           links[i].owner.Remove(p.prim);
         }
       }
+    }
+
+    public int layer {
+      [Hidden]
+      get { return origin.layer; }
     }
   }
 
@@ -192,7 +209,6 @@ namespace X13.PLC {
 
     public PiVar input;
     public PiVar output;
-    public int layer;
 
     public PiLink(JSObject jso, Topic src, Topic prim)
       : this(src.parent.GetI(jso["i"].As<string>(), true, prim, true), src.parent.GetI(jso["o"].As<string>(), true, prim, true)) {
@@ -228,12 +244,14 @@ namespace X13.PLC {
           if(_ipTopic.vType==typeof(PiAlias) && (al = _ipTopic.As<PiAlias>()) != null) {
             input = al.origin;
             al.AddLink(this);
+            PLC.instance.GetVar(input.owner, true, true);
           } else {
             input = PLC.instance.GetVar(_ipTopic, true, true);
           }
           if(_opTopic.vType==typeof(PiAlias) && (al = _opTopic.As<PiAlias>()) != null) {
             output = al.origin;
             al.AddLink(this);
+            PLC.instance.GetVar(output.owner, true, true);
           } else {
             output = PLC.instance.GetVar(_opTopic, true, true);
           }
@@ -277,7 +295,7 @@ namespace X13.PLC {
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
           output.owner._value=input.owner._value;
-          if(p.art==Perform.Art.changed && src==input.owner) {
+          if(src==input.owner) {
             var c=Perform.Create(output.owner, Perform.Art.changed, this.owner);
             c.o=input.owner._value;
             PLC.instance.DoCmd(c, true);
@@ -297,6 +315,13 @@ namespace X13.PLC {
     public override string ToString() {
       return string.Concat(_ipTopic.path, " >> ", _opTopic.path);
     }
+
+    public int layer {
+      [Hidden]
+      get;
+      [Hidden]
+      set;
+    }
   }
 
   internal class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
@@ -307,7 +332,6 @@ namespace X13.PLC {
     private string _funcName;
     internal PiDeclarer _decl;
 
-    public int layer;
     public PiBlock[] calcPath;
     public SortedList<string, PiVar> _pins;
 
@@ -321,27 +345,38 @@ namespace X13.PLC {
     }
 
     private void children_changed(Topic src, Perform p) {
-      PinDeclarer pd;
       if(_decl==null) {
         return;
       }
-      if(!_decl.pins.TryGetValue(src.name, out pd)) {
-        return;
-      }
-      if(p.art != Perform.Art.remove && p.art != Perform.Art.unsubscribe) {
+      if(p.art == Perform.Art.remove) {
         PiVar v;
-        if(!_pins.TryGetValue(src.name, out v)) {
-          v = PLC.instance.GetVar(src, true, true);
-          v.AddCont(this);
-          _pins.Add(src.name, v);
-          if(_pins.Count == 1) {
-            PLC.instance.AddBlock(this);
-          }
+        if(_pins.TryGetValue(src.name, out v)) {
+          _pins.Remove(src.name);
+          v.DelCont(this);
         }
-        if((p.art == Perform.Art.changed && pd.ip) || p.art == Perform.Art.subscribe) {
+      } else if(p.art != Perform.Art.unsubscribe) {
+        PinDeclarer pd = AddPin(src);
+        if(pd!=null && ((p.art == Perform.Art.changed && pd.ip) || p.art == Perform.Art.subscribe)) {
           _decl.Calc(this);
         }
       }
+    }
+
+    private PinDeclarer AddPin(Topic src) {
+      PinDeclarer pd;
+      if(!_decl.pins.TryGetValue(src.name, out pd)) {
+        return null;
+      }
+      PiVar v;
+      if(!_pins.TryGetValue(src.name, out v)) {
+        v = PLC.instance.GetVar(src, true, true);
+        v.AddCont(this);
+        _pins.Add(src.name, v);
+        if(_pins.Count == 1) {
+          PLC.instance.AddBlock(this);
+        }
+      }
+      return pd;
     }
 
     protected override JSObject GetMember(JSObject name, bool forWrite, bool own) {
@@ -418,8 +453,11 @@ namespace X13.PLC {
                 t.Set(p.Value.defaultValue, _owner);
               }
             }
+            foreach(var t in _owner.children) {
+              AddPin(t);
+            }
+            _owner.children.Subsribe(children_changed, true);
           }
-          _owner.children.Subsribe(children_changed, true);
         }
       }
     }
@@ -427,6 +465,13 @@ namespace X13.PLC {
     public void changed(Topic src, Perform p) {
 
     }
+    public int layer {
+      [Hidden]
+      get;
+      [Hidden]
+      set;
+    }
+
   }
 
   internal class PiDeclarer : CustomType {

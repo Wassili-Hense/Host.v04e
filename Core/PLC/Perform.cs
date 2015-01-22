@@ -73,8 +73,8 @@ namespace X13.PLC {
     }
 
     public bool EqualsEx(Perform other) {
-      return (this.art==other.art || (this.art==Art.changed && other.art<Art.changed) 
-        && object.Equals(this.o, other.o));
+      return (this.art==other.art || (this.art==Art.changed && other.art<Art.changed))
+        && object.Equals(this.o, other.o);
     }
 
     internal bool EqualsGr(Perform other) {

@@ -27,6 +27,7 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
     }
     private void DefInc() {
+      Topic.root.Get("/etc/PLC/func/NOT").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A?false:true;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
       Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
       Topic.root.Get("/etc/PLC/func/DEC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
       Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
@@ -483,7 +484,6 @@ namespace UnitTests.Core {
       a02_b_t.value=7;
 
       PLC.instance.Tick();
-      PLC.instance.Tick();
 
       Assert.AreEqual(4, a02._pins["A"].layer);
       Assert.AreEqual(5, a02.layer);
@@ -526,6 +526,32 @@ namespace UnitTests.Core {
       v1.value=12;
       PLC.instance.Tick();
       Assert.AreEqual(5, v3.As<int>());
+    }
+    /// <summary>Block(NOT, A, Q), Link(A, Q)</summary>
+    [TestMethod]
+    public void T26() {
+      DefInc();
+      var p = Topic.root.Get("/plc26");
+      var a01 = new PiBlock("NOT");
+      var a01_t = p.Get("A01");
+      var a01_q_t=a01_t.Get("Q");
+      a01_t.value = a01;
+      p.Get("w001").value=new PiLink(a01_q_t, a01_t.Get("A"));
+      PLC.instance.Tick();
+      Assert.IsNotNull(a01._decl, "func/NOT not found");
+      Assert.AreEqual(true, a01_q_t.As<bool>());
+
+      PLC.instance.Tick();
+      Assert.AreEqual(false, a01_q_t.As<bool>());
+
+      PLC.instance.Tick();
+      Assert.AreEqual(true, a01_q_t.As<bool>());
+
+      PLC.instance.Tick();
+      Assert.AreEqual(false, a01_q_t.As<bool>());
+
+      PLC.instance.Tick();
+      Assert.AreEqual(true, a01_q_t.As<bool>());
     }
   }
 }

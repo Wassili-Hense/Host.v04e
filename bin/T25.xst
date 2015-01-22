@@ -1,0 +1,32 @@
+<root head='/' saved='True'>
+  <item name='plc25' saved='True'>
+    <item name='w004' value='{"$type":"PiLink","i":"A02/Q","o":"v3_alias"}' saved='True' />
+    <item name='w003' value='{"$type":"PiLink","i":"A01/Q","o":"A02/A"}' saved='True' />
+    <item name='w002' value='{"$type":"PiLink","i":"A01/Q","o":"v2_alias"}' saved='True' />
+    <item name='w001' value='{"$type":"PiLink","i":"v1_alias","o":"A01/A"}' saved='True' />
+    <item name='v3_alias' value='{"$type":"PiAlias","alias":"/plc25/v3"}' saved='True' />
+    <item name='v3' />
+    <item name='v2_alias' value='{"$type":"PiAlias","alias":"/plc25/v2"}' saved='True' />
+    <item name='v2' />
+    <item name='v1_alias' value='{"$type":"PiAlias","alias":"/plc25/v1"}' saved='True' />
+    <item name='v1' value='19' saved='True' />
+    <item name='A02' value='{"$type":"PiBlock","func":"MOD"}' saved='True'>
+      <item name='Q' />
+      <item name='B' value='7' saved='True' />
+      <item name='A' />
+    </item>
+    <item name='A01' value='{"$type":"PiBlock","func":"INC"}' saved='True'>
+      <item name='Q' />
+      <item name='A' />
+    </item>
+  </item>
+  <item name='etc' saved='True'>
+    <item name='PLC' saved='True'>
+      <item name='func' saved='True'>
+        <item name='MOD' value='{"$type":"PiDeclarer","calc":"this.Q=this.A%this.B;","pins":{"A":{"pos":"A","mandatory":true},"B":{"pos":"B","mandatory":true},"Q":{"pos":"a","mandatory":true}}}' saved='True' />
+        <item name='INC' value='{"$type":"PiDeclarer","calc":"this.Q=this.A+1;","pins":{"A":{"pos":"A","mandatory":true},"Q":{"pos":"a","mandatory":true}}}' saved='True' />
+        <item name='DEC' value='{"$type":"PiDeclarer","calc":"this.Q=this.A-1;","pins":{"A":{"pos":"A","mandatory":true},"Q":{"pos":"a","mandatory":true}}}' saved='True' />
+      </item>
+    </item>
+  </item>
+</root>
