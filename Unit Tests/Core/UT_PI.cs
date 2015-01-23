@@ -273,7 +273,6 @@ namespace UnitTests.Core {
       var dl=new Action<Topic, Perform>((s, p) => { cmds1.Add(p); });
 
       var b3=root.Get("B3");
-      X13.PLC.PLC.instance.Tick();
       b3.all.changed+=dl;
       b3.Set(91.02);
       X13.PLC.PLC.instance.Tick();
@@ -489,7 +488,7 @@ namespace UnitTests.Core {
       Assert.AreEqual(2, a01._pins["A"].layer);
       Assert.AreEqual(3, a01.layer);
       Assert.AreEqual(3, a01._pins["Q"].layer);
-      Assert.AreEqual(29.3, v2.As<double>());
+      Assert.AreEqual(29.3, v2.As<double>()); //28.3+1
 
       PLC.Export("T24.xst", Topic.root);
 
@@ -518,9 +517,23 @@ namespace UnitTests.Core {
       Assert.AreEqual(4, a02._pins["A"].layer);
       Assert.AreEqual(5, a02.layer);
       Assert.AreEqual(5, a02._pins["Q"].layer);
-      Assert.AreEqual(6, v3.As<int>());
+      Assert.AreEqual(6, v3.As<int>());  // (19+1)%7
 
       PLC.Export("T24.xst", Topic.root);
+
+      var v4=p.Get("v4");
+      var k4_t=p.Get("v4_alias");
+      k4_t.value=new PiAlias(v4);
+      p.Get("w005").value=new PiLink(k4_t, a02_t.Get("B"));
+      v4.value=9;
+
+      PLC.instance.Tick();
+
+      Assert.AreEqual(4, a02._pins["A"].layer);
+      Assert.AreEqual(2, a02._pins["B"].layer);
+      Assert.AreEqual(5, a02.layer);
+      Assert.AreEqual(5, a02._pins["Q"].layer);
+      Assert.AreEqual(2, v3.As<int>());  // (19+1)%9
     }
     [TestMethod]
     public void T25() {
@@ -530,16 +543,16 @@ namespace UnitTests.Core {
       var v1=p.Get("v1");
       var v3=p.Get("v3");
       int i=499;
-      //var w=new System.Diagnostics.Stopwatch();
-      //w.Start();
-      //for(i=0; i<500; i++) 
+      //var w=new System.Diagnostics.Stopwatch(); //
+      //w.Start(); //
+      //for(i=0; i<500; i++)  //
       {
         v1.value=i;
         PLC.instance.Tick();
         Assert.AreEqual((i+1)%7, v3.As<int>());
       }
-      //w.Stop();
-      //X13.lib.Log.Info("T25 time={0}", w.Elapsed.TotalMilliseconds);
+      //w.Stop();  //
+      //X13.lib.Log.Info("T25 time={0}", w.Elapsed.TotalMilliseconds);  //
 
       var a03 = new PiBlock("DEC");
       var a03_t = p.Get("A03");

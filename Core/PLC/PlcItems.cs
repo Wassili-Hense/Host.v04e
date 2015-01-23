@@ -318,13 +318,13 @@ namespace X13.PLC {
 
     public int layer {
       [Hidden]
-      get;
-      [Hidden]
-      set;
+      get { 
+        return (input==null || input.layer==0)?0:input.layer+1; 
+      }
     }
   }
 
-  internal class PiBlock : CustomType, PlcItem, IComparable<PiBlock> {
+  internal class PiBlock : CustomType, PlcItem {
     static PiBlock() {
     }
 
@@ -422,12 +422,6 @@ namespace X13.PLC {
     [Hidden]
     public override string ToString() {
       return string.Concat(_owner==null?string.Empty:_owner.path, "[", _funcName, ", ", layer.ToString(), "]");
-    }
-    [Hidden]
-    public int CompareTo(PiBlock other) {
-      int l1=this.layer<=0?(this._pins.Select(z => z.Value).Where(z1 => z1.ip && z1.layer>0).Max(z2 => z2.layer)):this.layer;
-      int l2=other==null?int.MaxValue:(other.layer<=0?(other._pins.Select(z => z.Value).Where(z1 => z1.ip && z1.layer>0).Max(z2 => z2.layer)):other.layer);
-      return l1.CompareTo(l2);
     }
 
     public Topic owner {
