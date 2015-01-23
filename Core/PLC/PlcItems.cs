@@ -476,60 +476,67 @@ namespace X13.PLC {
 
   internal class PiDeclarer : CustomType {
     private static NiL.JS.Core.BaseTypes.Function ctor;
-    private static Topic _catalog;
     static PiDeclarer() {
       ctor= new Script("function Construct(){ return Function.apply(null, arguments); }").Context.GetVariable("Construct").Value as NiL.JS.Core.BaseTypes.Function;
-      _catalog=Topic.root.Get("/etc/PLC/func", true);
     }
 
     public static PiDeclarer Get(string name) {
       Topic t;
-      if(_catalog.Exist(name, out t)) {
+      if(Topic.root.Get("/etc/PLC/func", true).Exist(name, out t)) {
         return t.As<PiDeclarer>();
       }
       return null;
+    }
+    public static PiDeclarer Create(JSObject jso, Topic src, Topic prim) {
+      PiDeclarer rez;
+      if(src.vType==typeof(PiDeclarer)) {
+        rez=src.As<PiDeclarer>();
+      } else {
+        rez=new PiDeclarer();
+      }
+
+      JSObject tmp;
+      tmp=jso["init"];
+      if(tmp.ValueType==JSObjectType.String) {
+        rez._initFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+      }
+      tmp=jso["calc"];
+      if(tmp.ValueType==JSObjectType.String) {
+        rez._calcFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+      }
+      tmp=jso["deinit"];
+      if(tmp.ValueType==JSObjectType.String) {
+        rez._deinitFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+      }
+      rez.pins=new SortedList<string, PinDeclarer>();
+      tmp=jso["pins"];
+      if(tmp.ValueType==JSObjectType.Object) {
+        foreach(var p in tmp) {
+          rez.pins[p]=new PinDeclarer(tmp[p]);
+        }
+      }
+      if((tmp=jso["info"]).ValueType==JSObjectType.String) {
+        rez.info=tmp.As<string>();
+      } else {
+        rez.info=string.Empty;
+      }
+      if((tmp=jso["image"]).ValueType==JSObjectType.String) {
+        rez.image=tmp.As<string>();
+      } else {
+        rez.image=null;
+      }
+      return rez;
     }
 
     private NiL.JS.Core.BaseTypes.Function _initFunc;
     private NiL.JS.Core.BaseTypes.Function _calcFunc;
     private NiL.JS.Core.BaseTypes.Function _deinitFunc;
 
-    public readonly string info;
-    public readonly string image;
+    public string info;
+    public string image;
     public SortedList<string, PinDeclarer> pins;
 
-    public PiDeclarer(JSObject jso, Topic src, Topic prim) {
-      JSObject tmp;
-      tmp=jso["init"];
-      if(tmp.ValueType==JSObjectType.String) {
-        _initFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
-      }
-      tmp=jso["calc"];
-      if(tmp.ValueType==JSObjectType.String) {
-        _calcFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
-      }
-      tmp=jso["deinit"];
-      if(tmp.ValueType==JSObjectType.String) {
-        _deinitFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
-      }
-      pins=new SortedList<string, PinDeclarer>();
-      tmp=jso["pins"];
-      if(tmp.ValueType==JSObjectType.Object) {
-        foreach(var p in tmp) {
-          pins[p]=new PinDeclarer(tmp[p]);
-        }
-      }
-      if((tmp=jso["info"]).ValueType==JSObjectType.String) {
-        info=tmp.As<string>();
-      } else {
-        info=string.Empty;
-      }
-      if((tmp=jso["image"]).ValueType==JSObjectType.String) {
-        image=tmp.As<string>();
-      } else {
-        image=null;
-      }
-      X13.lib.Log.Debug("PiDeclarer OK");
+    private PiDeclarer() {
     }
 
     public void Init(PiBlock This) {

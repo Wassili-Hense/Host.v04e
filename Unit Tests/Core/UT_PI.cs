@@ -26,12 +26,6 @@ namespace UnitTests.Core {
       PLC.instance.Init();
       PLC.instance.Tick();
     }
-    private void DefInc() {
-      Topic.root.Get("/etc/PLC/func/NOT").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A?false:true;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
-      Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
-      Topic.root.Get("/etc/PLC/func/DEC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
-      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
-    }
     [TestMethod]
     public void T01() {
       Topic A1=root.Get("A1");
@@ -330,6 +324,38 @@ namespace UnitTests.Core {
       cmds1.Clear();
     }
     [TestMethod]
+    public void T17() {
+      var cmds1=new List<Perform>();
+      var p0=Topic.root.Get("/T17");
+      var dl=new Action<Topic, Perform>((s, p) => { p0.Get("C"); cmds1.Add(p); });
+      var a=p0.Get("A");
+      var b=p0.Get("B");
+      p0.children.changed+=dl;
+      PLC.instance.Tick();
+      Assert.AreEqual(4, cmds1.Count);
+      Assert.AreEqual(3, p0.children.Count());
+    }
+    [TestMethod]
+    public void T18() {
+      var th2=new System.Threading.Thread(new System.Threading.ThreadStart(T18_F2));
+      var th3=new System.Threading.Thread(new System.Threading.ThreadStart(T18_F3));
+      th2.Start();
+      th3.Start();
+      th2.Join();
+      th3.Join();
+      Assert.IsTrue(object.ReferenceEquals(t18_a2, t18_a3));
+      var a1=Topic.root.Get("/T18/A");
+      Assert.IsTrue(object.ReferenceEquals(a1, t18_a2));
+    }
+    private Topic t18_a2;
+    private void T18_F2() {
+      t18_a2=Topic.root.Get("/T18/A");
+    }
+    private Topic t18_a3;
+    private void T18_F3() {
+      t18_a3=Topic.root.Get("/T18/A");
+    }
+    [TestMethod]
     public void T19() {
       var t1=Topic.root.Get("/A/A_A/A_A_A");
       var t2=t1.parent.Get("A_A_B/A_A_B_A");
@@ -364,7 +390,8 @@ namespace UnitTests.Core {
     /// <summary>Block(INC)</summary>
     [TestMethod]
     public void T21() {
-      DefInc();
+      Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
       var p = Topic.root.Get("/plc2");
       var a1 = new PiBlock("INC");
       var a1_t = p.Get("A01");
@@ -435,7 +462,10 @@ namespace UnitTests.Core {
     /// <summary>Block(INC, A=alias, Q=alias), Block(MOD, A=A01/Q, B=7, Q=>alias)</summary>
     [TestMethod]
     public void T24() {
-      DefInc();
+      Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/DEC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
       var p = Topic.root.Get("/plc24");
 
       var v1=p.Get("v1");
@@ -530,7 +560,8 @@ namespace UnitTests.Core {
     /// <summary>Block(NOT, A, Q), Link(A, Q)</summary>
     [TestMethod]
     public void T26() {
-      DefInc();
+      Topic.root.Get("/etc/PLC/func/NOT").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A?false:true;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
       var p = Topic.root.Get("/plc26");
       var a01 = new PiBlock("NOT");
       var a01_t = p.Get("A01");
@@ -553,5 +584,28 @@ namespace UnitTests.Core {
       PLC.instance.Tick();
       Assert.AreEqual(true, a01_q_t.As<bool>());
     }
+    /// <summary>Block(MyFunc), modify MyFunc</summary>
+    [TestMethod]
+    public void T27() {
+      Topic.root.Get("/etc/PLC/func/MyFunc").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
+      var p = Topic.root.Get("/T27");
+      var a1 = new PiBlock("MyFunc");
+      var a1_t = p.Get("A01");
+      var a1_a = a1_t.Get("A");
+      var a1_q_t=a1_t.Get("Q");
+      a1_t.value = a1;
+      a1_a.value=3;
+      PLC.instance.Tick();
+      Assert.AreEqual(4, a1_q_t.As<int>());
+
+      Topic.root.Get("/etc/PLC/func/MyFunc").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
+      a1_a.value=7;
+      PLC.instance.Tick();
+      Assert.AreEqual(6, a1_q_t.As<int>());
+
+    }
+
   }
 }

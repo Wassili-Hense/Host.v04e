@@ -1,5 +1,7 @@
 ﻿using NiL.JS.Core;
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -21,8 +23,8 @@ namespace X13.PLC {
     private string _name;
     private string _path;
     /// <summary>[0] - saved, [1] - local, [2] - disposed, [3] - disposed fin., [4] - config </summary>
-    private System.Collections.BitArray _flags;
-    internal SortedList<string, Topic> _children;
+    private BitArray _flags;
+    internal ConcurrentDictionary<string, Topic> _children;
     internal List<SubRec> _subRecords;
     internal string _json;
     internal JSObject _value;
@@ -141,21 +143,23 @@ namespace X13.PLC {
         }
         next=null;
         if(home._children==null) {
-          home._children=new SortedList<string, Topic>();
+          lock(home) {
+            if(home._children==null) {
+              home._children=new ConcurrentDictionary<string, Topic>();
+            }
+          }
         } else if(home._children.TryGetValue(pt[i], out next)) {
           home=next;
         }
         if(next==null) {
           if(create) {
-            lock(home._children) {
-              if(home._children.TryGetValue(pt[i], out next)) {
-                home=next;
-              } else {
-                next=new Topic(home, pt[i]);
-                home._children[pt[i]]=next;
-                var c=Perform.Create(next, Perform.Art.create, prim);
-                PLC.instance.DoCmd(c, inter);
-              }
+            if(home._children.TryGetValue(pt[i], out next)) {
+              home=next;
+            } else {
+              next=new Topic(home, pt[i]);
+              home._children[pt[i]]=next;
+              var c=Perform.Create(next, Perform.Art.create, prim);
+              PLC.instance.DoCmd(c, inter);
             }
           } else {
             return null;
@@ -330,23 +334,21 @@ namespace X13.PLC {
       public IEnumerator<Topic> GetEnumerator() {
         if(!_deep) {
           if(_home._children!=null) {
-            Topic[] ch=_home._children.Values.ToArray();
-            for(int i=ch.Length-1; i>=0; i--) {
-              yield return ch[i];
+            foreach(var t in _home._children.OrderBy(z=>z.Key)) {
+              yield return t.Value;
             }
           }
+          yield break;
         } else {
           var hist=new Stack<Topic>();
-          Topic[] ch;
           Topic cur;
           hist.Push(_home);
           do {
             cur=hist.Pop();
             yield return cur;
             if(cur._children!=null) {
-              ch=cur._children.Values.ToArray();
-              for(int i=ch.Length-1; i>=0; i--) {
-                hist.Push(ch[i]);
+              foreach(var t in cur._children.OrderByDescending(z=>z.Key)) {
+                hist.Push(t.Value);
               }
             }
           } while(hist.Any());

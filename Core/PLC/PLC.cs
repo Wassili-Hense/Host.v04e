@@ -16,6 +16,7 @@ namespace X13.PLC {
     }
     public static readonly PLC instance;
 
+    private Thread _initTh;
     private ConcurrentQueue<Perform> _tcQueue;
     private Dictionary<string, Func<JSObject, Topic, Topic, JSObject>> _knownTypes;
     private List<Perform> _prOp;
@@ -36,18 +37,32 @@ namespace X13.PLC {
       _busyFlag = 1;
     }
     public void Init() {
+      _initTh=Thread.CurrentThread;
       if(Topic.root.children.Any()) {
-        this.Clear();
+        lock(Topic.root) {
+          Perform c;
+          while(_tcQueue.TryDequeue(out c)) {
+          }
+          _prOp.Clear();
+          foreach(var t in Topic.root.all) {
+            t.disposed = true;
+            if(t._children != null) {
+              t._children.Clear();
+              t._children = null;
+            }
+          }
+          _busyFlag = 1;
+        }
+        Topic.root.disposed = false;
       }
       _blocks.Clear();
       _vars.Clear();
       _knownTypes.Clear();
-      _prOp.Clear();
 
       _knownTypes["PiAlias"]=(j, s, p) => new PiAlias(j, s, p);
       _knownTypes["PiLink"]=(j, s, p) => new PiLink(j, s, p);
       _knownTypes["PiBlock"]=(j, s, p) => new PiBlock(j, s, p);
-      _knownTypes["PiDeclarer"]=(j, s, p) => new PiDeclarer(j, s, p);
+      _knownTypes["PiDeclarer"]=PiDeclarer.Create;
     }
     public void Start() {
     }
@@ -234,7 +249,6 @@ namespace X13.PLC {
       case Perform.Art.create:
         if((t = c.src.parent) != null) {
           //t._children[c.src.name]=c.src;
-          //TODO: think
           if(t._subRecords != null) {
             foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
               c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
@@ -360,6 +374,7 @@ namespace X13.PLC {
               cmd.src._value=f(jso, cmd.src, cmd.prim);
             } else {
               X13.lib.Log.Warning("{0}.setJson({1}) - unknown $type", cmd.src.path, cmd.o);
+              cmd.src._value = jso;
             }
           } else {
             cmd.src._value = jso;
@@ -418,7 +433,8 @@ namespace X13.PLC {
       if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.move) {
         cmd.src.disposed = true;
         if(cmd.src.parent != null) {
-          cmd.src.parent._children.Remove(cmd.src.name);
+          Topic tmp;
+          cmd.src.parent._children.TryRemove(cmd.src.name, out tmp);
         }
       }
       //TODO: save for undo/redo
@@ -428,22 +444,12 @@ namespace X13.PLC {
       }*/
     }
 
-    private void Clear() {
-      lock(Topic.root) {
-        Perform c;
-        while(_tcQueue.TryDequeue(out c)) {
-        }
-        _prOp.Clear();
-        foreach(var t in Topic.root.all) {
-          t.disposed = true;
-          if(t._children != null) {
-            t._children.Clear();
-            t._children = null;
-          }
-        }
-        _busyFlag = 1;
-      }
-      Topic.root.disposed = false;
+    internal bool CheckThread() {
+      return Thread.CurrentThread==_initTh;
+    }
+    internal Topic FindCreatedTopic(Topic parent, string name) {
+      var cmd=_tcQueue.FirstOrDefault(z => z.art==Perform.Art.create && z.src!=null && z.src.parent==parent && z.src.name==name);
+      return cmd==null?null:cmd.src;
     }
     internal void DoCmd(Perform cmd, bool intern) {
       if(intern) {
