@@ -62,7 +62,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Core\UT_PI.cs" />
-    <Compile Include="Engine\Topic_UT.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\Engine\Properties\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
