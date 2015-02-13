@@ -34,16 +34,6 @@ namespace X13.UI {
       }
     }
   }
-  class IVColorConverter : IValueConverter {
-    private static int count;
-    public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) {
-      return (count++) % 2 == 0?Brushes.MintCream:Brushes.White;
-    }
-
-    public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture) {
-      throw new NotImplementedException();
-    }
-  }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {
       return values.Cast<double>().Aggregate((x, y) => x -= y) - 26;

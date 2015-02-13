@@ -9,8 +9,6 @@
              d:DesignHeight="300" d:DesignWidth="300">
   <Grid>
     <Grid.Resources>
-      <my:IVColorConverter x:Key="colorConverter"/>
-      <my:IVColorConverter x:Key="colorConverter2"/>
 
       <!--Converter for Indentation of items-->
       <my:TreeListViewConverter x:Key="TreeListViewConverter"/>
@@ -18,9 +16,9 @@
       <!--Control Template for TreeViewItem's.-->
       <ControlTemplate TargetType="TreeViewItem" x:Key="TreeListViewItem">
         <!--Grid containing the current information and the subnodes.-->
-        <StackPanel Background="{Binding Path=., Converter={StaticResource colorConverter}}">
+        <StackPanel>
           <!--Border wrapping the content presenter.-->
-          <Border x:Name="Border" BorderThickness="0,0.5" BorderBrush="Gainsboro">
+          <Border x:Name="Border" BorderThickness="0,0.5" BorderBrush="Gainsboro" Background="White">
             <!--GridViewRowPrsenter containing the current information.-->
             <GridViewRowPresenter Content="{TemplateBinding Header}"
                     Columns="{Binding Columns, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:TreeListView}}"/>
@@ -35,12 +33,7 @@
           </Trigger>
           <!--Trigger used to change the color based on selection-->
           <Trigger Property="IsSelected" Value="True">
-            <!--Change the background color-->
-            <Setter TargetName="Border" Property="Background"
-                    Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
-            <!--Change the foreground color-->
-            <Setter Property="Foreground" 
-                    Value="{DynamicResource {x:Static SystemColors.HighlightTextBrushKey}}"/>
+            <Setter TargetName="Border" Property="BorderBrush" Value="Black"/>
           </Trigger>
           <!--Trigger used to change the color based on selection-->
           <MultiTrigger>
@@ -89,17 +82,11 @@
               <Image.Style>
                 <Style TargetType="Image">
                   <Style.Triggers>
-                    <DataTrigger 
-                    Binding="{Binding ElementName=pbState, Path=IsChecked}"
-                    Value="True">
-                      <Setter Property="Source"
-                        Value="/Dashboard;component/Images/TreeOp.png" />
+                    <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="True">
+                      <Setter Property="Source" Value="/Dashboard;component/Images/TreeOp.png" />
                     </DataTrigger>
-                    <DataTrigger 
-                    Binding="{Binding ElementName=pbState, Path=IsChecked}"
-                    Value="False">
-                      <Setter Property="Source"
-                        Value="/Dashboard;component/Images/TreeCl.png" />
+                    <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="False">
+                      <Setter Property="Source" Value="/Dashboard;component/Images/TreeCl.png" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
@@ -166,6 +153,96 @@
         </Setter>
       </Style>
       <my:GridColumnSpringConverter x:Key="ColumnSpringConverter"/>
+
+      <LinearGradientBrush x:Key="CheckedBlue" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FF285AB3" Offset="0" />
+        <GradientStop Color="#FF4184EC" Offset="0.5" />
+        <GradientStop Color="#FF558BED" Offset="0.5" />
+        <GradientStop Color="#FF7DACF0" Offset="1" />
+      </LinearGradientBrush>
+      <SolidColorBrush x:Key="CheckedBlueBorder" Color="#FF143874" />
+      <Style x:Key="BlueSwitchStyle" TargetType="{x:Type CheckBox}">
+        <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}" />
+        <Setter Property="Background" Value="{DynamicResource {x:Static SystemColors.WindowBrushKey}}" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="{x:Type CheckBox}">
+              <ControlTemplate.Resources>
+                <Storyboard x:Key="OnChecking">
+                  <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="slider" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                    <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="53" />
+                  </DoubleAnimationUsingKeyFrames>
+                </Storyboard>
+                <Storyboard x:Key="OnUnchecking">
+                  <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="slider" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
+                    <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0" />
+                  </DoubleAnimationUsingKeyFrames>
+                </Storyboard>
+              </ControlTemplate.Resources>
+              <DockPanel x:Name="dockPanel">
+                <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}" ContentTemplate="{TemplateBinding ContentTemplate}" RecognizesAccessKey="True" VerticalAlignment="Center" />
+                <Grid>
+                  <Border x:Name="BackgroundBorder" BorderBrush="#FF939393" BorderThickness="1" CornerRadius="3" Height="27" Width="94" HorizontalAlignment="Left">
+                    <Border.Background>
+                      <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#FFB5B5B5" Offset="0" />
+                        <GradientStop Color="#FFDEDEDE" Offset="0.1" />
+                        <GradientStop Color="#FFEEEEEE" Offset="0.5" />
+                        <GradientStop Color="#FFFAFAFA" Offset="0.5" />
+                        <GradientStop Color="#FFFEFEFE" Offset="1" />
+                      </LinearGradientBrush>
+                    </Border.Background>
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                      </Grid.ColumnDefinitions>
+                      <Ellipse x:Name="Off" Width="14" Height="14" Stroke="#FF7A7A7A" StrokeThickness="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      <Line x:Name="On" X1="0" Y1="0" X2="0" Y2="14" Stroke="#FF7A7A7A" StrokeThickness="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Grid>
+                  </Border>
+                  <Border BorderBrush="#FF939393" HorizontalAlignment="Left" x:Name="slider" Width="41" Height="27" BorderThickness="1" CornerRadius="3" RenderTransformOrigin="0.5,0.5" Margin="0">
+                    <Border.RenderTransform>
+                      <TransformGroup>
+                        <ScaleTransform ScaleX="1" ScaleY="1" />
+                        <SkewTransform AngleX="0" AngleY="0" />
+                        <RotateTransform Angle="0" />
+                        <TranslateTransform X="0" Y="0" />
+                      </TransformGroup>
+                    </Border.RenderTransform>
+                    <Border.Background>
+                      <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+                        <GradientStop Color="#FFF0F0F0" Offset="0" />
+                        <GradientStop Color="#FFCDCDCD" Offset="0.1" />
+                        <GradientStop Color="#FFFBFBFB" Offset="1" />
+                      </LinearGradientBrush>
+                    </Border.Background>
+                  </Border>
+                </Grid>
+              </DockPanel>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                  <Trigger.ExitActions>
+                    <BeginStoryboard Storyboard="{StaticResource OnUnchecking}" x:Name="OnUnchecking_BeginStoryboard" />
+                  </Trigger.ExitActions>
+                  <Trigger.EnterActions>
+                    <BeginStoryboard Storyboard="{StaticResource OnChecking}" x:Name="OnChecking_BeginStoryboard" />
+                  </Trigger.EnterActions>
+                  <Setter TargetName="On" Property="Stroke" Value="White" />
+                  <Setter TargetName="Off" Property="Stroke" Value="White" />
+                  <!-- Change Orange or Blue color here -->
+                  <Setter TargetName="BackgroundBorder" Property="Background" Value="{StaticResource CheckedBlue}" />
+                  <Setter TargetName="BackgroundBorder" Property="BorderBrush" Value="{StaticResource CheckedBlueBorder}" />
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                  <!-- ToDo: Add Style for Isenabled == False -->
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
     </Grid.Resources>
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -182,17 +259,17 @@
           <GridViewColumn.CellTemplate>
             <DataTemplate>
               <Grid MouseLeftButtonDown="StackPanel_MouseLeftButtonDown" >
-                  <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="24"/>
-                  </Grid.ColumnDefinitions>
-                  <!--The Expander Button (can be used in any column (typically the first one))-->
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="auto"/>
+                  <ColumnDefinition Width="*"/>
+                  <ColumnDefinition Width="24"/>
+                </Grid.ColumnDefinitions>
+                <!--The Expander Button (can be used in any column (typically the first one))-->
                 <my:TreeListViewExpander Grid.Column="0" />
                 <!--Display the name of the DataElement-->
                 <TextBlock Text="{Binding Name}" Grid.Column="1" VerticalAlignment="Center"/>
                 <Image Grid.Column="2" Stretch="None" Source="/Dashboard;component/Images/ty_obj.png" />
-                </Grid>
+              </Grid>
             </DataTemplate>
           </GridViewColumn.CellTemplate>
         </GridViewColumn>
@@ -207,7 +284,9 @@
             <my:InspectorValueTemplateSelector>
               <my:InspectorValueTemplateSelector.BoolValue>
                 <DataTemplate>
-                  <CheckBox IsChecked="{Binding Value}" VerticalAlignment="Center" />
+                  <Border>
+                    <CheckBox IsChecked="{Binding Value}" Style="{DynamicResource BlueSwitchStyle}" VerticalAlignment="Center" />
+                  </Border>
                 </DataTemplate>
               </my:InspectorValueTemplateSelector.BoolValue>
 
@@ -225,13 +304,13 @@
 
               <my:InspectorValueTemplateSelector.StringValue>
                 <DataTemplate>
-                  <TextBox Text="{Binding Value}" VerticalAlignment="Stretch" />
+                  <TextBox Text="{Binding Value}" VerticalAlignment="Center" />
                 </DataTemplate>
               </my:InspectorValueTemplateSelector.StringValue>
 
               <my:InspectorValueTemplateSelector.OtherValue>
                 <DataTemplate>
-                  <TextBlock Text="{Binding}" VerticalAlignment="Stretch"/>
+                  <TextBlock Text="{Binding}" VerticalAlignment="Center"/>
                 </DataTemplate>
               </my:InspectorValueTemplateSelector.OtherValue>
             </my:InspectorValueTemplateSelector>

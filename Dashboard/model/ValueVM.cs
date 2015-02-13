@@ -2,6 +2,7 @@
 using NiL.JS.Core.Modules;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 
@@ -9,31 +10,36 @@ namespace X13.model {
   internal class ValueVM : ViewModelBase {
     private ItemViewModel _item;
     private JSObject _parent;
-    private JSObject _value;
+    internal JSObject _value;
     private string _name;
+    private List<ValueVM> _properies;
+    private string _oType;
 
-    public ValueVM(ItemViewModel item, string name, JSObject parent) {
+    public ValueVM(ItemViewModel item, string name, JSObject value) {
       _item=item;
-      _name=name;
-      _parent=parent;
-      if(_parent==null) {
-        if(_name!="Alpha") {
-          _value=JSON.parse("{ \"A\": 5, \"B\": 13.4, \"C\": { \"CA\" : \"test\", \"CB\" : null, \"CC\" : true } }");
-        } else {
-          _value=(DateTime.Now.Ticks&0x7FFF)/100.0;
-        }
+      if(name==null) {
+        _name=null;
+        _parent=null;
+        _value=value;
       } else {
+        _name=name;
+        _parent=value;
         _value=_parent.GetMember(name);
       }
-    }
-    public IEnumerable<ValueVM> Properties {
-      get {
-        if(_value.ValueType>=JSObjectType.Object) {
-          foreach(var n in _value) {
-            yield return new ValueVM(_item, n, _value);
+      if(_value!=null && _value.ValueType>=JSObjectType.Object) {
+        _properies=new List<ValueVM>();
+        foreach(var n in _value) {
+          if(name==null && n=="$type") {
+            _oType=_value.GetMember("$type").As<string>();
+          } else {
+            _properies.Add(new ValueVM(_item, n, _value));
           }
         }
-        yield break;
+      }
+    }
+    public List<ValueVM> Properties {
+      get {
+        return _properies;
       }
     }
     public string Name { get { return _name; } }
@@ -51,7 +57,7 @@ namespace X13.model {
       }
     }
     public override string ToString() {
-      return JSON.stringify(_value, null, null);
+      return _oType??(_value==null?"null":_value.ToString());
     }
 
     private bool UpdateValue(object o) {

@@ -422,11 +422,13 @@ namespace X13.PLC {
             }
             break;
           }
-          cmd.src._json = null;
         }
         if(cmd.art != Perform.Art.remove) {
           cmd.art = Perform.Art.changed;
         }
+      }
+      if(cmd.art == Perform.Art.changed) {
+        cmd.src._json = null;
       }
       if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.move) {
         cmd.src.disposed = true;

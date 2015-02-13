@@ -99,6 +99,7 @@
     <Compile Include="model\ValueVM.cs" />
     <Compile Include="model\ViewModelBase.cs" />
     <Compile Include="model\Workspace.cs" />
+    <Compile Include="model\WsClient.cs" />
     <Compile Include="TreeListView.cs" />
     <Page Include="InspectorView.xaml">
       <Generator>MSBuild:Compile</Generator>

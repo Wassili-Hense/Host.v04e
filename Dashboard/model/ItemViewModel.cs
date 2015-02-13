@@ -9,10 +9,29 @@ using System.Text;
 namespace X13.model {
   internal class ItemViewModel : ViewModelBase {
     private static char[] _delmiter=new char[] { '/' };
+    private static Action<string, string, string> _re2;
     public static readonly ItemViewModel root;
 
     static ItemViewModel() {
       root=new ItemViewModel(null, "/") { posX=0, posY=0, sizeX=25, sizeY=20, view=Projection.IN };
+      WsClient.instance.Event+=RcvEvent;
+      _re2=new Action<string, string, string>(RcvEvent2);
+    }
+
+    static void RcvEvent(string path, string payload, string options) {
+      if(System.Windows.Application.Current!=null) {
+        System.Windows.Application.Current.Dispatcher.BeginInvoke(_re2, path, payload, options);
+      }
+    }
+    static void RcvEvent2(string path, string payload, string options) {
+      var t=root.Get(path);
+      t._value=new ValueVM(t, null, JSON.parse(payload, null));
+      if(t._parent!=null) {
+        t._parent.RaisePropertyChanged(t._name);
+      } else {
+        t.RaisePropertyChanged("Value");
+        t.RaisePropertyChanged("Properties");
+      }
     }
 
     private string _name;
@@ -23,19 +42,14 @@ namespace X13.model {
     private ItemViewModel(ItemViewModel parent, string name) {
       _name=name;
       _parent=parent;
-      _value=new ValueVM(this, _name, null);
+      _value=new ValueVM(this, null, null);
     }
 
     public IEnumerable<ItemViewModel> children {
       get {
         if(_children==null) {
           _children=new ObservableCollection<ItemViewModel>();
-          _children.Add(new ItemViewModel(this, "Alpha") { posX=5, posY=3, sizeX=25, sizeY=20, view=Projection.IN});
-          _children.Add(new ItemViewModel(this, "Beta") { posX=15, posY=3, sizeX=25, sizeY=20, view=Projection.IN });
-          if(_name!="Delta") {
-            _children.Add(new ItemViewModel(this, "Gamma") { posX=5, posY=12, sizeX=25, sizeY=20, view=Projection.IN });
-          }
-          _children.Add(new ItemViewModel(this, "Delta") { posX=15, posY=12, sizeX=25, sizeY=20, view=Projection.IN });
+          WsClient.instance.Subscribe(this.path, 2);    // /path/+
         }
         return _children;
       }
@@ -88,10 +102,11 @@ namespace X13.model {
       return cur;
     }
     internal void Update() {
-      X13.lib.Log.Debug("{0}={1}", _name, _value.ToString());
+      //X13.lib.Log.Debug("{0}={1}", _name, _value.ToString());
+      WsClient.instance.Publish(this.path, JSON.stringify(_value._value, null, null));
     }
     public override string ToString() {
-      return _value.ToString();
+      return _value==null?"null":_value.ToString();
     }
   }
   public enum Projection {
