@@ -26,12 +26,9 @@ namespace X13.model {
     static void RcvEvent2(string path, string payload, string options) {
       var t=root.Get(path);
       t._value=new ValueVM(t, null, JSON.parse(payload, null));
-      if(t._parent!=null) {
-        t._parent.RaisePropertyChanged(t._name);
-      } else {
-        t.RaisePropertyChanged("Value");
-        t.RaisePropertyChanged("Properties");
-      }
+      t.RaisePropertyChanged("Value");
+      t.RaisePropertyChanged("Properties");
+      t.RaisePropertyChanged("ViewType");
     }
 
     private string _name;
@@ -59,6 +56,7 @@ namespace X13.model {
         return _value.Properties;
       }
     }
+    public string ViewType { get { return _value.ViewType; } set { _value.ViewType=value; } }
     public string Name { get { return _name; } }
     public ValueVM ValueO { get { return _value; } }
     public object Value { get { return _value.Value; } set { _value.Value=value; } }

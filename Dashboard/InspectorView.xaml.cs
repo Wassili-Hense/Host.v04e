@@ -33,6 +33,32 @@ namespace X13.UI {
         }
       }
     }
+
+    private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
+      StackPanel p;
+      if((p=sender as StackPanel)!=null) {
+        var items=p.ContextMenu.Items;
+        items.Add(new MenuItem() { Header="Add child" });
+        items.Add(new MenuItem() { Header="View As" });
+        items.Add(new MenuItem() { Header="Remove" });
+      }
+
+    }
+
+    private void StackPanel_ContextMenuClosing(object sender, ContextMenuEventArgs e) {
+      StackPanel p;
+      if((p=sender as StackPanel)!=null) {
+        var items=p.ContextMenu.Items;
+        items.Clear();
+      }
+    }
+
+    private void Image_MouseUp(object sender, MouseButtonEventArgs e) {
+      Image p;
+      if(e.ClickCount==1 && e.ChangedButton==MouseButton.Left && (p=sender as Image)!=null) {
+        var c=p;
+      }
+    }
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {
@@ -40,32 +66,6 @@ namespace X13.UI {
     }
     public object[] ConvertBack(object value, System.Type[] targetTypes, object parameter, System.Globalization.CultureInfo culture) {
       throw new System.NotImplementedException();
-    }
-  }
-  internal class InspectorValueTemplateSelector : DataTemplateSelector {
-    public DataTemplate BoolValue { get; set; }
-    public DataTemplate IntValue { get; set; }
-    public DataTemplate DoubleValue { get; set; }
-    public DataTemplate StringValue { get; set; }
-    public DataTemplate OtherValue { get; set; }
-
-    public override DataTemplate SelectTemplate(object item, DependencyObject container) {
-      ItemViewModel i=item as ItemViewModel;
-      ValueVM m=(i==null)?item as ValueVM:i.ValueO;
-      if(m==null){
-        return null;
-      }
-      switch(m.ValueType) {
-      case JSObjectType.Bool:
-        return BoolValue;
-      case JSObjectType.Int:
-        return IntValue;
-      case JSObjectType.Double:
-        return DoubleValue;
-      case JSObjectType.String:
-        return StringValue;
-      }
-      return OtherValue;
     }
   }
 }

@@ -74,7 +74,7 @@ namespace X13.UI {
   /// Represents a convert that can calculate the indentation of any element in a class derived from TreeView.
   /// </summary>
   public class TreeListViewConverter : IValueConverter {
-    public const double Indentation = 20;
+    public const double Indentation = 16;
 
     #region IValueConverter Members
 

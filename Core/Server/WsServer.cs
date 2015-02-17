@@ -21,6 +21,7 @@ namespace X13.Server {
       Topic.root.Get("/A/v1").Set(true);
       Topic.root.Get("/A/i1").Set(157);
       Topic.root.Get("/A/d1").Set(9.81);
+      Topic.root.Get("/A/dt1").Set(DateTime.Now);
       Topic.root.Get("/Hello").Set("World");
       _plcTick=new System.Threading.Timer(PlcTick, null, 50, 100);
     }

@@ -14,6 +14,7 @@ namespace X13.model {
     private string _name;
     private List<ValueVM> _properies;
     private string _oType;
+    private string _viewType;
 
     public ValueVM(ItemViewModel item, string name, JSObject value) {
       _item=item;
@@ -54,6 +55,35 @@ namespace X13.model {
     public JSObjectType ValueType {
       get {
         return _value==null?JSObjectType.Undefined:_value.ValueType;
+      }
+    }
+    public string ViewType {
+      get {
+        if(string.IsNullOrEmpty(_viewType)) {
+          switch(this.ValueType) {
+          case JSObjectType.Bool:
+            _viewType="bool";
+            break;
+          case JSObjectType.Int:
+            _viewType="int";
+            break;
+          case JSObjectType.Double:
+            _viewType="double";
+            break;
+          case JSObjectType.String:
+            _viewType="string";
+            break;
+          case JSObjectType.Date:
+            _viewType="DateTime";
+            break;
+          default:
+            _viewType="other";
+            break;
+          }
+        }
+        return _viewType;
+      }
+      set {
       }
     }
     public override string ToString() {

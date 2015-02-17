@@ -401,8 +401,8 @@ namespace X13.PLC {
             break;
           case TypeCode.DateTime: {
               var dt = ((DateTime)cmd.o);
-              var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month, dt.Year, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
-              cmd.src._value=jdt.getTime();
+              var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month-1, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
+              cmd.src._value=new JSObject(jdt).valueOf();  //.getTime()
             }
             break;
           case TypeCode.Empty:
