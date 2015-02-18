@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:my="clr-namespace:X13.UI"
+             xmlns:mym="clr-namespace:X13.model"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300">
@@ -160,24 +161,24 @@
                     <Style TargetType="{x:Type Image}">
                       <Setter Property="Source" Value="/Dashboard;component/Images/ty_obj.png" />
                       <Style.Triggers>
-                        <DataTrigger Binding="{Binding ViewType}" Value="bool">
+                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Bool}">
                           <Setter Property="Source" Value="/Dashboard;component/Images/ty_bool.png"/>
                         </DataTrigger>
 
-                        <DataTrigger Binding="{Binding ViewType}" Value="int">
+                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Int}">
                           <Setter Property="Source" Value="/Dashboard;component/Images/ty_i64.png"/>
                         </DataTrigger>
 
-                        <DataTrigger Binding="{Binding ViewType}" Value="double">
+                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Double}">
                           <Setter Property="Source" Value="/Dashboard;component/Images/ty_f02.png"/>
                         </DataTrigger>
 
-                        <DataTrigger Binding="{Binding ViewType}" Value="string">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_str.png"/>
+                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.DateTime}">
+                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_dt.png"/>
                         </DataTrigger>
 
-                        <DataTrigger Binding="{Binding ViewType}" Value="DateTime">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_dt.png"/>
+                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.String}">
+                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_str.png"/>
                         </DataTrigger>
 
                       </Style.Triggers>
@@ -206,7 +207,7 @@
               </Control>
 
               <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding ViewType}" Value="bool">
+                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Bool}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -305,17 +306,17 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="int">
+                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Int}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
-                        <xctk:LongUpDown  Value="{Binding Value}"  VerticalAlignment="Center" BorderThickness="0" HorizontalContentAlignment="Left" />
+                        <xctk:LongUpDown  Value="{Binding Value}" VerticalAlignment="Stretch" BorderThickness="0" HorizontalAlignment="Left"/>
                       </ControlTemplate>
                     </Setter.Value>
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="double">
+                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Double}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -325,21 +326,21 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="string">
+                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.DateTime}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
-                        <TextBox Text="{Binding Value}" VerticalAlignment="Center" BorderThickness="0" />
+                        <xctk:DateTimePicker Value="{Binding Value}"  VerticalAlignment="Stretch" BorderThickness="0" HorizontalAlignment="Left" />
                       </ControlTemplate>
                     </Setter.Value>
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="DateTime">
+                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.String}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
-                        <xctk:DateTimePicker Value="{Binding Value}"  VerticalAlignment="Stretch" BorderThickness="0" />
+                        <TextBox Text="{Binding Value}" VerticalAlignment="Center" BorderThickness="0" />
                       </ControlTemplate>
                     </Setter.Value>
                   </Setter>

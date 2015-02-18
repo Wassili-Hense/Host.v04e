@@ -25,10 +25,15 @@ namespace X13.model {
     }
     static void RcvEvent2(string path, string payload, string options) {
       var t=root.Get(path);
-      t._value=new ValueVM(t, null, JSON.parse(payload, null));
+      t._value=new ValueVM(t, JSON.parse(payload, null));
+      t._value.PropertyChanged+=t._value_PropertyChanged;
       t.RaisePropertyChanged("Value");
       t.RaisePropertyChanged("Properties");
       t.RaisePropertyChanged("ViewType");
+    }
+
+    void _value_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e) {
+      this.RaisePropertyChanged(e.PropertyName);  
     }
 
     private string _name;
@@ -39,7 +44,7 @@ namespace X13.model {
     private ItemViewModel(ItemViewModel parent, string name) {
       _name=name;
       _parent=parent;
-      _value=new ValueVM(this, null, null);
+      _value=new ValueVM(this, null);
     }
 
     public IEnumerable<ItemViewModel> children {
@@ -103,9 +108,16 @@ namespace X13.model {
       //X13.lib.Log.Debug("{0}={1}", _name, _value.ToString());
       WsClient.instance.Publish(this.path, JSON.stringify(_value._value, null, null));
     }
+    internal void Remove() {
+      if(_parent!=null) {
+        _parent._children.Remove(this);
+        WsClient.instance.Publish(this.path, string.Empty);
+      }
+    }
     public override string ToString() {
       return _value==null?"null":_value.ToString();
     }
+
   }
   public enum Projection {
     /// <summary>InspectorView</summary>

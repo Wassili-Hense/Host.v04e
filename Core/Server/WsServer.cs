@@ -18,7 +18,8 @@ namespace X13.Server {
       PLC.PLC.instance.Start();
       PLC.PLC.instance.Tick();
       Topic.root.Get("/A/W001").SetJson("{\"$type\":\"PiLink\",\"i\":\"v1\",\"o\":\"v2\"}");
-      Topic.root.Get("/A/v1").Set(true);
+      Topic.root.Get("/A/O1").SetJson("{\"A\":15,\"B\":19.62,\"C\":{\"CA\":true}}");
+      Topic.root.Get("/A/v1").Set(false);
       Topic.root.Get("/A/i1").Set(157);
       Topic.root.Get("/A/d1").Set(9.81);
       Topic.root.Get("/A/dt1").Set(DateTime.Now);
@@ -81,8 +82,13 @@ namespace X13.Server {
       }
     }
     public void Publish(string path, string payload, string options) {
-      var tmp=_owner.Get(path, true, _owner);
-      tmp.SetJson(payload, _owner);      
+      if(string.IsNullOrEmpty(payload)) {
+        var tmp=_owner.Get(path, false, _owner);
+        tmp.Remove(_owner);
+      } else {
+        var tmp=_owner.Get(path, true, _owner);
+        tmp.SetJson(payload, _owner);
+      }
     }
   }
 }

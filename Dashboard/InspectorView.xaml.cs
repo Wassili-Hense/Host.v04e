@@ -36,13 +36,60 @@ namespace X13.UI {
 
     private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
       StackPanel p;
+      MenuItem mi;
       if((p=sender as StackPanel)!=null) {
         var items=p.ContextMenu.Items;
-        items.Add(new MenuItem() { Header="Add child" });
-        items.Add(new MenuItem() { Header="View As" });
-        items.Add(new MenuItem() { Header="Remove" });
+        mi=new MenuItem() { Header="Add child", Tag="A" };
+        mi.Click+=ContextMenuClick;
+        items.Add(mi);
+
+        var va=new MenuItem() { Header="View As" };
+
+        mi=new MenuItem() { Header="Bool", Tag="#"+ViewTypeEn.Bool };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        mi=new MenuItem() { Header="Long", Tag="#"+ViewTypeEn.Int };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        mi=new MenuItem() { Header="Double", Tag="#"+ViewTypeEn.Double };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        mi=new MenuItem() { Header="DateTime", Tag="#"+ViewTypeEn.DateTime };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        mi=new MenuItem() { Header="String", Tag="#"+ViewTypeEn.String };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        mi=new MenuItem() { Header="Object", Tag="#"+ViewTypeEn.Object };
+        mi.Click+=ContextMenuClick;
+        va.Items.Add(mi);
+
+        items.Add(va);
+        mi=new MenuItem() { Header="Remove", Tag="R" };
+        mi.Click+=ContextMenuClick;
+        items.Add(mi);
       }
 
+    }
+
+    void ContextMenuClick(object sender, RoutedEventArgs e) {
+      MenuItem mi=sender as MenuItem;
+      ItemViewModel it;
+      ValueVM v;
+      string cmd;
+      if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && ((v=mi.DataContext as ValueVM)!=null || ((it=mi.DataContext as ItemViewModel)!=null && (v=it.ValueO)!=null))) {
+        if(cmd[0]=='#') {
+          v.ViewType=cmd.Substring(1);
+        } else if(cmd[0]=='R') {
+          v.Remove();
+        }
+      }
+      e.Handled=true;
     }
 
     private void StackPanel_ContextMenuClosing(object sender, ContextMenuEventArgs e) {
@@ -57,6 +104,7 @@ namespace X13.UI {
       Image p;
       if(e.ClickCount==1 && e.ChangedButton==MouseButton.Left && (p=sender as Image)!=null) {
         var c=p;
+        //TODO: show contextmenu
       }
     }
   }
