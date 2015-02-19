@@ -49,6 +49,9 @@ namespace X13.model {
       }
       ActiveDocument=i;
     }
+    public void CloseFile(ItemViewModel i) {
+      _files.Remove(i);
+    }
     private ItemViewModel _activeDocument = null;
     public ItemViewModel ActiveDocument {
       get { return _activeDocument; }

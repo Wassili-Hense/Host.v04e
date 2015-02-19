@@ -7,7 +7,7 @@
              xmlns:mym="clr-namespace:X13.model"
              xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
              mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="300">
+             d:DesignHeight="300" d:DesignWidth="300" FontFamily="Consolas" FontSize="12" Background="#FFFFFFFF">
   <Grid>
     <Grid.Resources>
       <!--Converter for Indentation of items-->
@@ -18,8 +18,57 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition/>
     </Grid.RowDefinitions>
-    <TextBlock Grid.Row="0" Text="{Binding path}" Background="White" Height="24" FontSize="15" />
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition/>
+        <ColumnDefinition Width="35"/>
+        <ColumnDefinition Width="35"/>
+      </Grid.ColumnDefinitions>
+      <ItemsControl ItemsSource="{Binding NameList}" Grid.Row="0" BorderThickness="0" Background="#00000000">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Orientation="Horizontal" MouseLeftButtonUp="PathMouseLBU" >
+              <Border BorderThickness="1" Margin="0" Padding="1, 1, 4, 1">
+                <TextBlock Text="{Binding Name}" ToolTip="{Binding path}"  />
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="Background" Value="#40FFFFFF" />
+                    <Setter Property="BorderBrush" Value="#807F7F7F" />
+                    <Style.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#80FFFFFF" />
+                        <Setter Property="BorderBrush" Value="Black" />
+                      </Trigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
+              </Border>
+              <TextBlock Text="/" Margin="2, 0" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button Grid.Column="1" Content="+" Background="Transparent" FontSize="16" FontWeight="Black" Margin="3, 1" Click="AddItemClick" ></Button>
+      <Button Grid.Column="2" Background="Transparent"  Margin="3, 1"></Button>
+    </Grid>
+
     <my:TreeListView Grid.Row="1" x:Name="tlInspector" AllowsColumnReorder="False" ItemsSource="{Binding children}">
+      <my:TreeListView.Resources>
+        <Style TargetType="GridViewColumnHeader" x:Key="WhHeader">
+          <Setter Property="Background" Value="White" />
+          <Setter Property="FontWeight" Value="Bold" />
+          <Setter Property="HorizontalContentAlignment" Value="Left" />
+          <Setter Property="BorderThickness" Value="0,1" />
+          <Setter Property="BorderBrush" Value="Black" />
+          <Setter Property="Padding"  Value="5,0,2,0" />
+        </Style>
+        <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource WhHeader}" />
+      </my:TreeListView.Resources>
       <my:TreeListView.Template>
         <ControlTemplate TargetType="{x:Type my:TreeListView}">
           <ControlTemplate.Resources>
@@ -31,7 +80,7 @@
                     <!--Grid containing the current information and the subnodes.-->
                     <StackPanel ContextMenuOpening="StackPanel_ContextMenuOpening" ContextMenuClosing="StackPanel_ContextMenuClosing">
                       <!--Border wrapping the content presenter.-->
-                      <Border x:Name="Border" BorderThickness="0, 1, 0, 0" BorderBrush="Gainsboro" Background="White">
+                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro" Background="White">
                         <!--GridViewRowPrsenter containing the current information.-->
                         <GridViewRowPresenter Content="{TemplateBinding Header}" Columns="{Binding Columns, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:TreeListView}}"/>
                       </Border>
@@ -93,12 +142,17 @@
           </Border>
         </ControlTemplate>
       </my:TreeListView.Template>
-        <!--Create an item template to specify the ItemsSource-->
+      <!--Create an item template to specify the ItemsSource-->
       <my:TreeListView.ItemTemplate>
         <HierarchicalDataTemplate ItemsSource="{Binding Properties}" />
       </my:TreeListView.ItemTemplate>
       <my:TreeListView.Columns>
         <GridViewColumn x:Name="gcName" Header="Name" Width="200">
+          <GridViewColumn.HeaderContainerStyle >
+            <Style TargetType="GridViewColumnHeader" BasedOn="{StaticResource WhHeader}">
+              <Setter Property="BorderThickness" Value="0,1,1,1" />
+            </Style>
+          </GridViewColumn.HeaderContainerStyle>
           <GridViewColumn.CellTemplate>
             <DataTemplate>
               <Grid MouseLeftButtonDown="StackPanel_MouseLeftButtonDown" >
@@ -155,7 +209,24 @@
                   </my:TreeListViewExpander.Template>
                 </my:TreeListViewExpander>
                 <!--Display the name of the DataElement-->
-                <TextBlock Text="{Binding Name}" Grid.Column="1" VerticalAlignment="Center"/>
+                <TextBox x:Name="tbItemName" Text="{Binding Name}" Grid.Column="1" VerticalAlignment="Center" Loaded="tbNameLoaded" LostKeyboardFocus="tbItemName_LostKeyboardFocus">
+                  <TextBox.Style>
+                    <Style TargetType="TextBox">
+                      <Setter Property="IsEnabled" Value="False" />
+                      <Setter Property="IsReadOnly" Value="True" />
+                      <Setter Property="BorderBrush" Value="Transparent" />
+                      <Setter Property="Background" Value="White" />
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding EditName}" Value="True">
+                          <Setter Property="IsReadOnly" Value="False" />
+                          <Setter Property="BorderBrush" Value="Black" />
+                          <Setter Property="IsEnabled" Value="True" />
+                          <Setter Property="Background" Value="AliceBlue" />
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBox.Style>
+                </TextBox>
                 <Image Grid.Column="2" Stretch="None" MouseUp="Image_MouseUp">
                   <Image.Style>
                     <Style TargetType="{x:Type Image}">

@@ -45,9 +45,12 @@ namespace X13.model {
       _name=name;
       _parent=parent;
       _value=new ValueVM(this, null);
+      if(string.IsNullOrEmpty(_name)) {
+        EditName=true;
+      }
     }
 
-    public IEnumerable<ItemViewModel> children {
+    public ObservableCollection<ItemViewModel> children {
       get {
         if(_children==null) {
           _children=new ObservableCollection<ItemViewModel>();
@@ -62,7 +65,7 @@ namespace X13.model {
       }
     }
     public string ViewType { get { return _value.ViewType; } set { _value.ViewType=value; } }
-    public string Name { get { return _name; } }
+    public string Name { get { return _parent==null?WsClient.instance.Info:_name; } set {  } }
     public ValueVM ValueO { get { return _value; } }
     public object Value { get { return _value.Value; } set { _value.Value=value; } }
     public string path { get { return _parent==null?"/":(_parent==root?"/"+_name:_parent.path+"/"+_name); } }
@@ -72,6 +75,8 @@ namespace X13.model {
     public int posY { get; set; }
     public int sizeX { get; set; }
     public int sizeY { get; set; }
+    public bool EditName { get; private set; }
+    public IEnumerable<ItemViewModel> NameList { get { return _parent==null?(new ItemViewModel[]{this}):_parent.NameList.Union(new ItemViewModel[]{this}); } }
 
     internal ItemViewModel Get(string p) {
       ItemViewModel cur;
@@ -111,13 +116,21 @@ namespace X13.model {
     internal void Remove() {
       if(_parent!=null) {
         _parent._children.Remove(this);
-        WsClient.instance.Publish(this.path, string.Empty);
+        if(!EditName) {
+          WsClient.instance.Publish(this.path, string.Empty);
+        }
       }
     }
     public override string ToString() {
       return _value==null?"null":_value.ToString();
     }
 
+
+    internal ItemViewModel Create() {
+      var n=new ItemViewModel(this, string.Empty);
+      _children.Insert(0, n);
+      return n;
+    }
   }
   public enum Projection {
     /// <summary>InspectorView</summary>

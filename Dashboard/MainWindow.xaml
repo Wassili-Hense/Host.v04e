@@ -10,9 +10,9 @@
   <Grid>
     <avalonDock:DockingManager x:Name="dockManager" AllowMixedOrientation="True" 
                                ActiveContent="{Binding ActiveDocument, Mode=TwoWay, Converter={StaticResource ActiveDocumentConverter}}"
-                               DocumentsSource="{Binding Files}">
+                               DocumentsSource="{Binding Files}" DocumentClosed="dockManager_DocumentClosed">
       <avalonDock:DockingManager.Theme>
-        <avalonDock:AeroTheme/>
+        <avalonDock:Vs2013LightTheme/>
       </avalonDock:DockingManager.Theme>
       <avalonDock:DockingManager.DocumentHeaderTemplate>
         <DataTemplate>
@@ -38,7 +38,7 @@
           </x13:PanesTemplateSelector.InTemplate>
           <x13:PanesTemplateSelector.LoTemplate>
             <DataTemplate>
-              <Grid ClipToBounds="True">
+              <Grid ClipToBounds="True" Background="White">
                 <Grid.RowDefinitions>
                   <RowDefinition Height="Auto"/>
                   <RowDefinition/>

@@ -158,5 +158,9 @@ namespace X13.UI {
       }
 
     }
+
+    private void dockManager_DocumentClosed(object sender, Xceed.Wpf.AvalonDock.DocumentClosedEventArgs e) {
+      Workspace.This.CloseFile(e.Document.Content as ItemViewModel);
+    }
   }
 }

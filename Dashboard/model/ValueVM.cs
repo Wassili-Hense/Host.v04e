@@ -40,7 +40,7 @@ namespace X13.model {
         return _properies;
       }
     }
-    public string Name { get { return _name; } }
+    public string Name { get { return _name; } set { } }
     public object Value {
       get {
         if(_value==null) {
@@ -103,6 +103,7 @@ namespace X13.model {
         }
       }
     }
+    public bool EditName { get; private set; }
     public override string ToString() {
       return _oType??(_value==null?"null":_value.ToString());
     }
@@ -110,7 +111,9 @@ namespace X13.model {
       if(_parent!=null) {
         _parent._value[_name]=JSObject.Undefined;
         _parent._properies.Remove(this);
-        _item.Update();
+        if(!EditName) {
+          _item.Update();
+        }
       } else {
         _value=JSObject.Undefined;
         _item.Remove();

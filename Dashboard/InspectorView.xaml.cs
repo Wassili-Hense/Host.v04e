@@ -33,15 +33,30 @@ namespace X13.UI {
         }
       }
     }
+    private void PathMouseLBU(object sender, MouseButtonEventArgs e) {
+      var sp=sender as StackPanel;
+      ItemViewModel m;
+      if(sp!=null && (m=sp.DataContext as ItemViewModel)!=null) {
+        e.Handled=true;
+        Workspace.This.AddFile(m);
+      }
+      e.Handled=true;
+    }
+
 
     private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
       StackPanel p;
       MenuItem mi;
-      if((p=sender as StackPanel)!=null) {
+      ItemViewModel it;
+      ValueVM v;
+
+      if((p=sender as StackPanel)!=null && ((v=p.DataContext as ValueVM)!=null || ((it=p.DataContext as ItemViewModel)!=null && (v=it.ValueO)!=null)) ) {
         var items=p.ContextMenu.Items;
-        mi=new MenuItem() { Header="Add child", Tag="A" };
-        mi.Click+=ContextMenuClick;
-        items.Add(mi);
+        if(v.ValueType>=JSObjectType.Object) {
+          mi=new MenuItem() { Header="Add child", Tag="A" };
+          mi.Click+=ContextMenuClick;
+          items.Add(mi);
+        }
 
         var va=new MenuItem() { Header="View As" };
 
@@ -107,6 +122,43 @@ namespace X13.UI {
         //TODO: show contextmenu
       }
     }
+
+    private void AddItemClick(object sender, RoutedEventArgs e) {
+      ItemViewModel it;
+      var s=sender as Button;
+      if(s!=null && (it=s.DataContext as ItemViewModel)!=null) {
+        //var z=
+        it.Create();
+        //var z1=this.tlInspector.ItemContainerGenerator.ContainerFromItem(z) as FrameworkElement;
+        //this.tlInspector.Focus();
+        //System.Reflection.MethodInfo selectMethod = typeof(TreeViewItem).GetMethod("Select", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        //selectMethod.Invoke(z1, new object[] { true });
+      }
+    }
+
+    private void tbNameLoaded(object sender, RoutedEventArgs e) {
+      var mi=sender as TextBox;
+      ItemViewModel it;
+      ValueVM v;
+      if(mi!=null && (((v=mi.DataContext as ValueVM)!=null && v.EditName ) || ((it=mi.DataContext as ItemViewModel)!=null && it.EditName) )) {
+        mi.Focus();
+      }
+    }
+
+    private void tbItemName_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) {
+      var tb=sender as TextBox;
+      ItemViewModel it;
+      ValueVM v;
+      if(tb!=null) {
+        if((v=tb.DataContext as ValueVM)!=null && v.EditName){
+          v.Remove();
+        } else if((it=tb.DataContext as ItemViewModel)!=null && it.EditName){
+          it.Remove();
+        }
+      }
+
+    }
+
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {

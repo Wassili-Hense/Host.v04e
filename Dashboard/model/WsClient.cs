@@ -17,6 +17,8 @@ namespace X13.model {
     private WsClient() {
       _conn=WsServer.instance.Connect(RcvEvent);
     }
+    public string Info { get { return "local"; } }
+
     public void Subscribe(string path, int mask) {
       _conn.Subscribe(path, mask);
     }
