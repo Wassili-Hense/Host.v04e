@@ -402,7 +402,7 @@ namespace X13.PLC {
           case TypeCode.DateTime: {
               var dt = ((DateTime)cmd.o);
               var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month-1, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
-              cmd.src._value=new JSObject(jdt).valueOf();  //.getTime()
+              cmd.src._value=new JSObject(jdt);  //.getTime() .valueOf()
             }
             break;
           case TypeCode.Empty:

@@ -15,8 +15,8 @@ namespace X13.UI {
     public static Typeface FtFont { get; private set; }
 
     private LogramView _owner;
-    internal ItemViewModel _model;
-    public BlockView(LogramView owner, ItemViewModel model) {
+    internal TopicM _model;
+    public BlockView(LogramView owner, TopicM model) {
       _owner=owner;
       _model=model;
       Render(3);

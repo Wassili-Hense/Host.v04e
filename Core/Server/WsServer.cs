@@ -59,10 +59,7 @@ namespace X13.Server {
     }
 
     void ChangedEvent(Topic s, Perform p) {
-      if(p.prim==_owner){
-        return;
-      }
-      if(p.art==Perform.Art.changed  || p.art==Perform.Art.subscribe){
+      if((p.art==Perform.Art.changed && p.prim!=_owner) || p.art==Perform.Art.subscribe || (p.art==Perform.Art.create && p.prim==_owner)){
         _rcvEvent(s.path, s.ToJson(), null);
       }
     }
@@ -89,6 +86,11 @@ namespace X13.Server {
         var tmp=_owner.Get(path, true, _owner);
         tmp.SetJson(payload, _owner);
       }
+      X13.lib.Log.Debug("Pub({0}, {1})", path, payload);
+    }
+
+    public void Create(string path, string payload, string options) {
+      var tmp=_owner.Get(path, true, _owner);
     }
   }
 }

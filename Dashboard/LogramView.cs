@@ -12,7 +12,7 @@ namespace X13.UI {
   internal class LogramView : Canvas {
     public static int CellSize=16;
 
-    private ItemViewModel _vm;
+    private TopicM _vm;
     public List<Visual> _visuals;
 
     public LogramView()
@@ -20,7 +20,7 @@ namespace X13.UI {
       _visuals=new List<Visual>();
     }
     protected override void OnInitialized(EventArgs e) {
-      _vm=this.DataContext as ItemViewModel;
+      _vm=this.DataContext as TopicM;
       if(_vm!=null) {
         if(_vm.sizeX<=0) {
           _vm.sizeX=35;
@@ -30,7 +30,7 @@ namespace X13.UI {
           _vm.sizeY=20;
         }
         this.Height=_vm.sizeY*CellSize;
-        foreach(var ch in _vm.children) {
+        foreach(var ch in _vm.Children) {
           var ui = new BlockView(this, ch);
         }
       }

@@ -24,8 +24,8 @@
       <avalonDock:DockingManager.LayoutItemContainerStyle>
         <Style TargetType="{x:Type avalonDock:LayoutItem}">
           <Setter Property="Title" Value="{Binding Model.Name}"/>
-          <Setter Property="ContentId" Value="{Binding Model.contentId}"/>
-          <Setter Property="ToolTip" Value="{Binding Model.path}" />
+          <Setter Property="ContentId" Value="{Binding Model.ContentId}"/>
+          <Setter Property="ToolTip" Value="{Binding Model.Path}" />
         </Style>
       </avalonDock:DockingManager.LayoutItemContainerStyle>
 

@@ -102,8 +102,8 @@ namespace X13.UI {
 
     private void ListViewItem_MouseDoubleClick(object sender, MouseButtonEventArgs e) {
       ListViewItem li;
-      ItemViewModel it=sender as ItemViewModel;
-      if((li= sender as ListViewItem)!=null && (it=li.DataContext as ItemViewModel)!=null) {
+      TopicM it=sender as TopicM;
+      if((li= sender as ListViewItem)!=null && (it=li.DataContext as TopicM)!=null) {
         Workspace.This.AddFile(it);
       }
     }
@@ -160,7 +160,7 @@ namespace X13.UI {
     }
 
     private void dockManager_DocumentClosed(object sender, Xceed.Wpf.AvalonDock.DocumentClosedEventArgs e) {
-      Workspace.This.CloseFile(e.Document.Content as ItemViewModel);
+      Workspace.This.CloseFile(e.Document.Content as TopicM);
     }
   }
 }

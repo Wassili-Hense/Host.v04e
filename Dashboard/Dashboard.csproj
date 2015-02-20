@@ -69,8 +69,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="model\ItemViewModel.cs" />
-    <Compile Include="model\ValueVM.cs" />
+    <Compile Include="model\PropertyM.cs" />
+    <Compile Include="model\TopicM.cs" />
     <Compile Include="model\ViewModelBase.cs" />
     <Compile Include="model\Workspace.cs" />
     <Compile Include="model\WsClient.cs" />

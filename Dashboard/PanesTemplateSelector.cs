@@ -23,12 +23,12 @@ namespace X13.UI {
     }
 
     public override System.Windows.DataTemplate SelectTemplate(object item, System.Windows.DependencyObject container) {
-      var it=item as ItemViewModel;
+      var it=item as TopicM;
       if(it!=null) {
-        if(it.view==Projection.LO) {
+        if(it.View==Projection.LO) {
           return LoTemplate;
         }
-        if(it.view==Projection.IN) {
+        if(it.View==Projection.IN) {
           return InTemplate;
         }
       }

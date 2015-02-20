@@ -23,37 +23,37 @@ namespace X13.model {
 
     #region instance variables
 
-    private ObservableCollection<ItemViewModel> _files;
-    private ReadOnlyObservableCollection<ItemViewModel> _readonyFiles;
+    private ObservableCollection<TopicM> _files;
+    private ReadOnlyObservableCollection<TopicM> _readonyFiles;
 
     #endregion instance variables
 
     private Workspace() {
-      _files = new ObservableCollection<ItemViewModel>();
+      _files = new ObservableCollection<TopicM>();
       _readonyFiles = null;
-      _files.Add(ItemViewModel.root);
+      _files.Add(TopicM.root);
     }
 
 
-    public ReadOnlyObservableCollection<ItemViewModel> Files {
+    public ReadOnlyObservableCollection<TopicM> Files {
       get {
         if(_readonyFiles == null)
-          _readonyFiles = new ReadOnlyObservableCollection<ItemViewModel>(_files);
+          _readonyFiles = new ReadOnlyObservableCollection<TopicM>(_files);
 
         return _readonyFiles;
       }
     }
-    public void AddFile(ItemViewModel i) {
+    public void AddFile(TopicM i) {
       if(_files.All(z => z!=i)) {
         _files.Add(i);
       }
       ActiveDocument=i;
     }
-    public void CloseFile(ItemViewModel i) {
+    public void CloseFile(TopicM i) {
       _files.Remove(i);
     }
-    private ItemViewModel _activeDocument = null;
-    public ItemViewModel ActiveDocument {
+    private TopicM _activeDocument = null;
+    public TopicM ActiveDocument {
       get { return _activeDocument; }
       set {
         if(_activeDocument != value) {
@@ -69,24 +69,24 @@ namespace X13.model {
       if(p==null || p.Length<3) {
         return null;
       }
-      var fileViewModel = _files.FirstOrDefault(fm => fm.contentId == p);
+      var fileViewModel = _files.FirstOrDefault(fm => fm.ContentId == p);
       if(fileViewModel != null) {
         this.ActiveDocument = fileViewModel; // File is already open so shiw it
 
         return fileViewModel;
       }
 
-      fileViewModel = _files.FirstOrDefault(fm => fm.contentId == p);
+      fileViewModel = _files.FirstOrDefault(fm => fm.ContentId == p);
       if(fileViewModel != null)
         return fileViewModel;
       if(p.StartsWith("LO:")) {
-        var r=ItemViewModel.root.Get(p.Substring(3));
-        r.view=Projection.LO;
+        var r=TopicM.root.Get(p.Substring(3));
+        r.View=Projection.LO;
         _files.Add(r);
         return r;
       } else if(p.StartsWith("IN:")) {
-        var r=ItemViewModel.root.Get(p.Substring(3));
-        r.view=Projection.IN;
+        var r=TopicM.root.Get(p.Substring(3));
+        r.View=Projection.IN;
         _files.Add(r);
         return r;
       }

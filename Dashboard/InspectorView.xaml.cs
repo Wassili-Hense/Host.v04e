@@ -26,8 +26,8 @@ namespace X13.UI {
     private void StackPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
       if(e.ClickCount==2) {
         var sp=sender as Grid;
-        ItemViewModel m;
-        if(sp!=null && (m=sp.DataContext as ItemViewModel)!=null) {
+        TopicM m;
+        if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
           e.Handled=true;
           Workspace.This.AddFile(m);
         }
@@ -35,8 +35,8 @@ namespace X13.UI {
     }
     private void PathMouseLBU(object sender, MouseButtonEventArgs e) {
       var sp=sender as StackPanel;
-      ItemViewModel m;
-      if(sp!=null && (m=sp.DataContext as ItemViewModel)!=null) {
+      TopicM m;
+      if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
         e.Handled=true;
         Workspace.This.AddFile(m);
       }
@@ -47,10 +47,9 @@ namespace X13.UI {
     private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
       StackPanel p;
       MenuItem mi;
-      ItemViewModel it;
-      ValueVM v;
+      PropertyM v;
 
-      if((p=sender as StackPanel)!=null && ((v=p.DataContext as ValueVM)!=null || ((it=p.DataContext as ItemViewModel)!=null && (v=it.ValueO)!=null)) ) {
+      if((p=sender as StackPanel)!=null && (v=p.DataContext as PropertyM)!=null) {
         var items=p.ContextMenu.Items;
         if(v.ValueType>=JSObjectType.Object) {
           mi=new MenuItem() { Header="Add child", Tag="A" };
@@ -94,12 +93,13 @@ namespace X13.UI {
 
     void ContextMenuClick(object sender, RoutedEventArgs e) {
       MenuItem mi=sender as MenuItem;
-      ItemViewModel it;
-      ValueVM v;
+      PropertyM v;
       string cmd;
-      if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && ((v=mi.DataContext as ValueVM)!=null || ((it=mi.DataContext as ItemViewModel)!=null && (v=it.ValueO)!=null))) {
+      if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && (v=mi.DataContext as PropertyM)!=null) {
         if(cmd[0]=='#') {
           v.ViewType=cmd.Substring(1);
+        } else if(cmd[0]=='A') {
+          v.AddProperty();
         } else if(cmd[0]=='R') {
           v.Remove();
         }
@@ -124,11 +124,11 @@ namespace X13.UI {
     }
 
     private void AddItemClick(object sender, RoutedEventArgs e) {
-      ItemViewModel it;
+      TopicM it;
       var s=sender as Button;
-      if(s!=null && (it=s.DataContext as ItemViewModel)!=null) {
+      if(s!=null && (it=s.DataContext as TopicM)!=null) {
         //var z=
-        it.Create();
+        it.AddChild();
         //var z1=this.tlInspector.ItemContainerGenerator.ContainerFromItem(z) as FrameworkElement;
         //this.tlInspector.Focus();
         //System.Reflection.MethodInfo selectMethod = typeof(TreeViewItem).GetMethod("Select", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
@@ -138,23 +138,43 @@ namespace X13.UI {
 
     private void tbNameLoaded(object sender, RoutedEventArgs e) {
       var mi=sender as TextBox;
-      ItemViewModel it;
-      ValueVM v;
-      if(mi!=null && (((v=mi.DataContext as ValueVM)!=null && v.EditName ) || ((it=mi.DataContext as ItemViewModel)!=null && it.EditName) )) {
+      TopicM it;
+      PropertyM v;
+      if(mi!=null && (((v=mi.DataContext as PropertyM)!=null && v.EditName) || ((it=mi.DataContext as TopicM)!=null && it.EditName))) {
         mi.Focus();
       }
     }
 
     private void tbItemName_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) {
       var tb=sender as TextBox;
-      ItemViewModel it;
-      ValueVM v;
-      if(tb!=null) {
-        if((v=tb.DataContext as ValueVM)!=null && v.EditName){
-          v.Remove();
-        } else if((it=tb.DataContext as ItemViewModel)!=null && it.EditName){
-          it.Remove();
+      PropertyM v;
+      if(tb!=null && (v=tb.DataContext as PropertyM)!=null && v.EditName) {
+        v.Remove();
+      }
+    }
+
+    private void tbItemName_PreviewKeyDown(object sender, KeyEventArgs e) {
+      TextBox tb;
+      if((tb=sender as TextBox)==null) {
+        return;
+      }
+      if(e.Key==Key.Escape) {
+        tbItemName_LostKeyboardFocus(sender, null);
+        e.Handled=true;
+      } else if(e.Key==Key.Enter) {
+        TopicM it;
+        PropertyM v;
+        try {
+          if((v=tb.DataContext as PropertyM)!=null && v.EditName) {
+            v.SetName(tb.Text);
+          } else if((it=tb.DataContext as TopicM)!=null && it.EditName) {
+            it.SetName(tb.Text);
+          }
         }
+        catch(ArgumentException ex) {
+          X13.lib.Log.Error(ex.Message);
+        }
+        e.Handled=true;
       }
 
     }

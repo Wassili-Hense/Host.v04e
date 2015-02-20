@@ -26,6 +26,9 @@ namespace X13.model {
       _conn.Unsubscribe(path, mask);
     }
 
+    internal void Create(string path, string payload) {
+      _conn.Create(path, payload, string.Empty);
+    }
     public void Publish(string path, string payload, string options=null) {
       _conn.Publish(path, payload, options);
     }
@@ -44,5 +47,6 @@ namespace X13.model {
         Event(path, payload, options);
       }
     }
+
   }
 }
