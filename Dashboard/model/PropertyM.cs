@@ -104,6 +104,10 @@ namespace X13.model {
           _parent._value[Name]=val;
         }
         Publish();
+        if(ViewType!=ViewTypeEn.Object && Properties!=null && Properties.Count>0) {
+          Properties.Clear();
+          this.RaisePropertyChanged("Properties");
+        }
       }
     }
     public string ViewType {
@@ -141,14 +145,29 @@ namespace X13.model {
     }
 
     public void AddProperty() {
-      if(!Expanded) {
-        Expanded=true;
-        this.RaisePropertyChanged("Expanded");
+      bool pr=false;
+      bool exp=false;
+      if(Properties==null) {
+        Properties=new ObservableCollection<PropertyM>();
+        pr=true;
       }
       Properties.Insert(0, new PropertyM(this, string.Empty));
+      if(!Expanded) {
+        Expanded=true;
+        exp=true;
+      }
+      if(pr) {
+        this.RaisePropertyChanged("Properties");
+      }
+      if(exp) {
+        this.RaisePropertyChanged("Expanded");
+      }
     }
     public virtual void SetName(string nname) {
       this.Name=nname;
+      if(_parent._value.Value==null || _parent._value==JSObject.Undefined) {
+        _parent._value=JSON.parse("{ }");
+      }
       _value=_parent._value.DefineMember(Name);
       int i, j;
       for(i=_parent.Properties.Count-1; i>=0; i--) {
@@ -168,10 +187,10 @@ namespace X13.model {
       EditName=false;
       RaisePropertyChanged("EditName");
     }
-    public virtual void Remove() {
+    public virtual void Remove(bool ext) {
       _parent._value[Name]=JSObject.Undefined;
       _parent.Properties.Remove(this);
-      if(!EditName) {
+      if(ext) {
         Publish();
       }
     }
@@ -229,6 +248,7 @@ namespace X13.model {
       this.RaisePropertyChanged("Value");
       if(propCh) {
         this.RaisePropertyChanged("Properties");
+        propCh=true;
       }
     }
 

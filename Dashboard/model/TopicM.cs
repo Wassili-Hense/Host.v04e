@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 
 namespace X13.model {
-  internal class TopicM : PropertyM {
+  internal class TopicM : PropertyM, IDisposable {
     #region static
     private static char[] _delmiter=new char[] { '/' };
     private static Action<string, string, string> _re2;
@@ -24,22 +24,37 @@ namespace X13.model {
       }
     }
     static void RcvEvent2(string path, string payload, string options) {
-      var t=root.Get(path);
-      t.SetValue(JSON.parse(payload, null));
+      if(string.IsNullOrEmpty(payload)) {
+        var t=root.Get(path, false);
+        if(t!=null) {
+          t.Remove(false);
+        }
+      } else {
+        var t=root.Get(path);
+        t.SetValue(JSON.parse(payload, null));
+      }
     }
     #endregion static
 
     private ObservableCollection<TopicM> _children;
+    private int _subscribed;  // TODO: subscribed parent/+ | self
 
     private TopicM(TopicM parent, string name)
       : base(parent, name) {
+        if(parent!=null && (parent._subscribed & 2)==0) {
+          WsClient.instance.Subscribe(this.Path, 1);
+          _subscribed|=1;
+        }
     }
 
     public ObservableCollection<TopicM> Children {
       get {
         if(_children==null) {
           _children=new ObservableCollection<TopicM>();
-          WsClient.instance.Subscribe(this.Path, 2);    // /path/+
+        }
+        if((_subscribed&2)==0){
+          WsClient.instance.Subscribe(this.Path, 2);    // path/+
+          _subscribed|=2;
         }
         return _children;
       }
@@ -55,7 +70,7 @@ namespace X13.model {
     public double posX { get; set; }
     public double posY { get; set; }
 
-    public TopicM Get(string p) {
+    public TopicM Get(string p, bool create=true) {
       TopicM cur;
       TopicM next=null;
       if(!string.IsNullOrEmpty(p) && p.StartsWith("/")) {
@@ -68,11 +83,21 @@ namespace X13.model {
       }
       string[] pe=p.Split(_delmiter, StringSplitOptions.RemoveEmptyEntries);
       for(int i=0; i<pe.Length; i++, cur=next) {
-        next=cur.Children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);    // create & fill if null
+        if(cur._children==null) {
+          next=null;
+        } else {
+          next=cur._children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);    // create & fill if null
+        }
         bool chExist=next!=null;
         if(!chExist) {
-          lock(cur) {
-            next=cur.Children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);
+          if(create) {
+            if(cur._children==null) {
+              cur._children=new ObservableCollection<TopicM>();
+              next=null;
+            } else {
+              next=cur._children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);
+            }
+
             chExist=next!=null;
             if(!chExist) {
               if(pe[i]=="+" || pe[i]=="#") {
@@ -85,8 +110,10 @@ namespace X13.model {
                   break;
                 }
               }
-              cur.Children.Insert(idx, next);
+              cur._children.Insert(idx, next);
             }
+          } else {
+            return null;
           }
         }
       }
@@ -99,26 +126,39 @@ namespace X13.model {
       if(string.IsNullOrEmpty(Name)) {   // Create
         Name=nname;
         WsClient.instance.Create(this.Path, "undefined");
-        this.Remove();
+        this.Remove(false);
       } else {    // rename
         //TODO: rename
       }
     }
     protected override void Publish() {
-      WsClient.instance.Publish(this.Path, JSON.stringify(_value, null, null));
+      string json=JSON.stringify(_value, null, null);
+      if(string.IsNullOrEmpty(json)) {
+        json="null";
+      }
+      WsClient.instance.Publish(this.Path, json);
     }
-    public override void Remove() {
-      var p=_parent as TopicM;
-      if(p!=null) {
-        p._children.Remove(this);
-        if(!EditName) {
+    public override void Remove(bool ext) {
+      if(this!=root) {
+        if(ext) {
           WsClient.instance.Publish(this.Path, string.Empty);
+        } else {
+          if(_children!=null) {
+            for(int i=_children.Count-1; i>=0; i--) {
+              _children[i].Remove(ext);
+            }
+          }
+          (_parent as TopicM)._children.Remove(this);
+          Workspace.This.CloseFile(this);
         }
       }
     }
-
     public override string ToString() {
       return Path;
+    }
+
+    public void Dispose() {
+      WsClient.instance.Unsubscribe(this.Path, _subscribed); // path/+
     }
   }
   public enum Projection {

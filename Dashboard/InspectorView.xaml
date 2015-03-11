@@ -78,9 +78,9 @@
                 <Setter.Value>
                   <ControlTemplate TargetType="TreeViewItem">
                     <!--Grid containing the current information and the subnodes.-->
-                    <StackPanel ContextMenuOpening="StackPanel_ContextMenuOpening" ContextMenuClosing="StackPanel_ContextMenuClosing">
+                    <StackPanel ContextMenuOpening="StackPanel_ContextMenuOpening" ContextMenuClosing="StackPanel_ContextMenuClosing"  Background="White">
                       <!--Border wrapping the content presenter.-->
-                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro" Background="White">
+                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro">
                         <!--GridViewRowPrsenter containing the current information.-->
                         <GridViewRowPresenter Content="{TemplateBinding Header}" Columns="{Binding Columns, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:TreeListView}}"/>
                       </Border>
@@ -95,15 +95,14 @@
                       <Trigger Property="IsExpanded" Value="True">
                         <Setter TargetName="ItemsPresenter" Property="Visibility" Value="Visible"/>
                       </Trigger>
-                      <!--Trigger used to change the color based on selection-->
+                      <!--Trigger used to change the color based on selection
                       <MultiTrigger>
                         <MultiTrigger.Conditions>
                           <Condition Property="IsSelected" Value="True"/>
                           <Condition Property="IsSelectionActive" Value="True"/>
                         </MultiTrigger.Conditions>
-                        <!--Change the background color-->
                         <Setter TargetName="Border" Property="BorderBrush" Value="Black" />
-                      </MultiTrigger>
+                      </MultiTrigger>-->
                     </ControlTemplate.Triggers>
                   </ControlTemplate>
                 </Setter.Value>
@@ -166,51 +165,46 @@
                 <my:TreeListViewExpander Grid.Column="0">
                   <my:TreeListViewExpander.Template>
                     <ControlTemplate TargetType="{x:Type my:TreeListViewExpander}">
-                      <StackPanel Orientation="Horizontal" x:Name="ContainerElement">
-                        <!--Use a FrameworkElement to indent the button-->
-                        <FrameworkElement Width="{Binding RelativeSource={x:Static RelativeSource.Self}, Converter={StaticResource TreeListViewConverter}}"/>
-                        <!--Use a standard toggle button-->
-                        <ToggleButton x:Name="pbState" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" Width="18" Height="18" VerticalAlignment="Center" Margin="2,3,4,3">
-                          <ToggleButton.Style>
-                            <Style TargetType="{x:Type ToggleButton}">
-                              <Setter Property="Template">
-                                <Setter.Value>
-                                  <ControlTemplate TargetType="ToggleButton">
-                                    <Border BorderThickness="0" Width="20" Height="20">
-                                      <ContentPresenter/>
-                                    </Border>
-                                  </ControlTemplate>
-                                </Setter.Value>
-                              </Setter>
-                            </Style>
-                          </ToggleButton.Style>
-                          <Image Stretch="None" x:Name="img">
-                            <Image.Style>
-                              <Style TargetType="Image">
-                                <Style.Triggers>
-                                  <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="True">
-                                    <Setter Property="Source" Value="/Dashboard;component/Images/TreeOp.png" />
-                                  </DataTrigger>
-                                  <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="False">
-                                    <Setter Property="Source" Value="/Dashboard;component/Images/TreeCl.png" />
-                                  </DataTrigger>
-                                </Style.Triggers>
-                              </Style>
-                            </Image.Style>
-                          </Image>
-                        </ToggleButton>
-                      </StackPanel>
-                      <ControlTemplate.Triggers>
-                        <!--Trigger used to show/hide the expand button-->
-                        <DataTrigger Binding="{Binding HasItems, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" Value="False">
-                          <Setter TargetName="ContainerElement" Property="Visibility" Value="Hidden"/>
-                        </DataTrigger>
-                      </ControlTemplate.Triggers>
+                      <!--Use a standard toggle button-->
+                      <ToggleButton x:Name="pbState" VerticalAlignment="Center" 
+                                      IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" 
+                                      Margin="{Binding RelativeSource={x:Static RelativeSource.Self}, Converter={StaticResource TreeListViewConverter}}">
+                        <ToggleButton.Template>
+                          <ControlTemplate TargetType="ToggleButton">
+                            <Image Stretch="None" x:Name="img" Width="16" Height="16">
+                              <Image.Style>
+                                <Style TargetType="Image">
+                                  <Style.Triggers>
+                                    <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="True">
+                                      <Setter Property="Source" Value="/Dashboard;component/Images/TreeOp.png" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding ElementName=pbState, Path=IsChecked}" Value="False">
+                                      <Setter Property="Source" Value="/Dashboard;component/Images/TreeCl.png" />
+                                    </DataTrigger>
+                                  </Style.Triggers>
+                                </Style>
+                              </Image.Style>
+                            </Image>
+                          </ControlTemplate>
+                        </ToggleButton.Template>
+                        <ToggleButton.Style>
+                          <Style TargetType="ToggleButton">
+                            <Style.Triggers>
+                              <!--Trigger used to show/hide the expand button-->
+                              <DataTrigger Binding="{Binding HasItems, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" Value="False">
+                                <Setter Property="Visibility" Value="Hidden"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </ToggleButton.Style>
+                      </ToggleButton>
                     </ControlTemplate>
                   </my:TreeListViewExpander.Template>
                 </my:TreeListViewExpander>
                 <!--Display the name of the DataElement-->
-                <TextBox x:Name="tbItemName" Text="{Binding Name, Mode=OneWay}" Grid.Column="1" BorderThickness="0" VerticalAlignment="Stretch" Loaded="tbNameLoaded" LostKeyboardFocus="tbItemName_LostKeyboardFocus" VerticalContentAlignment="Center" PreviewKeyDown="tbItemName_PreviewKeyDown">
+                <TextBox x:Name="tbItemName" Text="{Binding Name, Mode=OneWay}" Grid.Column="1" BorderThickness="1,0,0,0" BorderBrush="Gainsboro"
+                         VerticalAlignment="Stretch" Loaded="tbNameLoaded" LostKeyboardFocus="tbItemName_LostKeyboardFocus" 
+                         VerticalContentAlignment="Center" PreviewKeyDown="tbItemName_PreviewKeyDown">
                   <TextBox.Style>
                     <Style TargetType="TextBox">
                       <Setter Property="Focusable"  Value="False" />
@@ -292,12 +286,12 @@
                                 <Setter.Value>
                                   <ControlTemplate TargetType="{x:Type CheckBox}">
                                     <ControlTemplate.Resources>
-                                      <Storyboard x:Key="OnChecking">
+                                      <Storyboard x:Key="OnUnchecking">
                                         <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="slider" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
-                                          <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="53" />
+                                          <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="38" />
                                         </DoubleAnimationUsingKeyFrames>
                                       </Storyboard>
-                                      <Storyboard x:Key="OnUnchecking">
+                                      <Storyboard x:Key="OnChecking">
                                         <DoubleAnimationUsingKeyFrames BeginTime="00:00:00" Storyboard.TargetName="slider" Storyboard.TargetProperty="(UIElement.RenderTransform).(TransformGroup.Children)[3].(TranslateTransform.X)">
                                           <SplineDoubleKeyFrame KeyTime="00:00:00.1000000" Value="0" />
                                         </DoubleAnimationUsingKeyFrames>
@@ -306,7 +300,7 @@
                                     <DockPanel x:Name="dockPanel">
                                       <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}" Content="{TemplateBinding Content}" ContentStringFormat="{TemplateBinding ContentStringFormat}" ContentTemplate="{TemplateBinding ContentTemplate}" RecognizesAccessKey="True" VerticalAlignment="Center" />
                                       <Grid>
-                                        <Border x:Name="BackgroundBorder" BorderThickness="0" CornerRadius="3" Height="27" Width="94" HorizontalAlignment="Left">
+                                        <Border x:Name="BackgroundBorder" BorderThickness="0" CornerRadius="3" Height="20" Width="79" HorizontalAlignment="Left">
                                           <Border.Background>
                                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                               <GradientStop Color="#FFB5B5B5" Offset="0" />
@@ -320,11 +314,11 @@
                                               <ColumnDefinition />
                                               <ColumnDefinition />
                                             </Grid.ColumnDefinitions>
-                                            <Ellipse x:Name="Off" Width="14" Height="14" Stroke="White" StrokeThickness="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            <Line x:Name="On" X1="0" Y1="0" X2="0" Y2="14" Stroke="#FF7A7A7A" StrokeThickness="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Line x:Name="On" X1="0" Y1="0" X2="0" Y2="14" Stroke="#FF7A7A7A" StrokeThickness="2" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            <Ellipse x:Name="Off" Width="14" Height="14" Stroke="White" StrokeThickness="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" />
                                           </Grid>
                                         </Border>
-                                        <Border BorderBrush="#FF939393" HorizontalAlignment="Left" x:Name="slider" Width="41" Height="27" BorderThickness="1" CornerRadius="3" RenderTransformOrigin="0.5,0.5" Margin="0">
+                                        <Border BorderBrush="#FF939393" HorizontalAlignment="Left" x:Name="slider" Width="42" Height="19" BorderThickness="1" CornerRadius="3" RenderTransformOrigin="0.5,0.5" Margin="0">
                                           <Border.RenderTransform>
                                             <TransformGroup>
                                               <ScaleTransform ScaleX="1" ScaleY="1" />
@@ -335,9 +329,10 @@
                                           </Border.RenderTransform>
                                           <Border.Background>
                                             <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
-                                              <GradientStop Color="#FFF0F0F0" Offset="0" />
-                                              <GradientStop Color="#FFCDCDCD" Offset="0.1" />
-                                              <GradientStop Color="#FFFBFBFB" Offset="1" />
+                                              <GradientStop Color="#C0F0F0F0" Offset="0" />
+                                              <GradientStop Color="#60CDCDCD" Offset="0.2" />
+                                              <GradientStop Color="#60CDCDCD" Offset="0.8" />
+                                              <GradientStop Color="#C0FBFBFB" Offset="1" />
                                             </LinearGradientBrush>
                                           </Border.Background>
                                         </Border>
@@ -346,10 +341,10 @@
                                     <ControlTemplate.Triggers>
                                       <Trigger Property="IsChecked" Value="True">
                                         <Trigger.ExitActions>
-                                          <BeginStoryboard Storyboard="{StaticResource OnUnchecking}" x:Name="OnUnchecking_BeginStoryboard" />
+                                          <BeginStoryboard Storyboard="{StaticResource OnChecking}" x:Name="OnChecking_BeginStoryboard" />
                                         </Trigger.ExitActions>
                                         <Trigger.EnterActions>
-                                          <BeginStoryboard Storyboard="{StaticResource OnChecking}" x:Name="OnChecking_BeginStoryboard" />
+                                          <BeginStoryboard Storyboard="{StaticResource OnUnchecking}" x:Name="OnUnchecking_BeginStoryboard" />
                                         </Trigger.EnterActions>
                                         <!-- Change Orange or Blue color here -->
                                         <Setter TargetName="BackgroundBorder" Property="Background">
@@ -362,9 +357,6 @@
                                             </LinearGradientBrush>
                                           </Setter.Value>
                                         </Setter>
-                                      </Trigger>
-                                      <Trigger Property="IsEnabled" Value="False">
-                                        <!-- ToDo: Add Style for Isenabled == False -->
                                       </Trigger>
                                     </ControlTemplate.Triggers>
                                   </ControlTemplate>
@@ -382,7 +374,7 @@
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
-                        <xctk:LongUpDown  Value="{Binding Value}" VerticalAlignment="Stretch" BorderThickness="0" HorizontalAlignment="Left"/>
+                        <xctk:LongUpDown  Value="{Binding Value}" VerticalAlignment="Stretch" BorderThickness="0" HorizontalAlignment="Left" ParsingNumberStyle="Integer" />
                       </ControlTemplate>
                     </Setter.Value>
                   </Setter>

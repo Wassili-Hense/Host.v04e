@@ -51,7 +51,7 @@ namespace X13.UI {
 
       if((p=sender as StackPanel)!=null && (v=p.DataContext as PropertyM)!=null) {
         var items=p.ContextMenu.Items;
-        if(v.ValueType>=JSObjectType.Object) {
+        if(v.ViewType==ViewTypeEn.Object) {
           mi=new MenuItem() { Header="Add child", Tag="A" };
           mi.Click+=ContextMenuClick;
           items.Add(mi);
@@ -101,7 +101,7 @@ namespace X13.UI {
         } else if(cmd[0]=='A') {
           v.AddProperty();
         } else if(cmd[0]=='R') {
-          v.Remove();
+          v.Remove(true);
         }
       }
       e.Handled=true;
@@ -149,7 +149,7 @@ namespace X13.UI {
       var tb=sender as TextBox;
       PropertyM v;
       if(tb!=null && (v=tb.DataContext as PropertyM)!=null && v.EditName) {
-        v.Remove();
+        v.Remove(false);
       }
     }
 
@@ -182,7 +182,8 @@ namespace X13.UI {
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {
-      return values.Cast<double>().Aggregate((x, y) => x -= y) - 26;
+      double ret=values.Cast<double>().Aggregate((x, y) => x -= y) - 26;
+      return ret>30?ret:30;
     }
     public object[] ConvertBack(object value, System.Type[] targetTypes, object parameter, System.Globalization.CultureInfo culture) {
       throw new System.NotImplementedException();

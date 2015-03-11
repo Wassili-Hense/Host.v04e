@@ -74,7 +74,7 @@ namespace X13.UI {
   /// Represents a convert that can calculate the indentation of any element in a class derived from TreeView.
   /// </summary>
   public class TreeListViewConverter : IValueConverter {
-    public const double Indentation = 16;
+    public const double Indentation = 8;
 
     #region IValueConverter Members
 
@@ -83,7 +83,7 @@ namespace X13.UI {
       if(value == null)
         return null;
       //Convert the item to a double
-      if(targetType == typeof(double) && typeof(DependencyObject).IsAssignableFrom(value.GetType())) {
+      if(targetType == typeof(Thickness) && typeof(DependencyObject).IsAssignableFrom(value.GetType())) {
         //Cast the item as a DependencyObject
         DependencyObject Element = value as DependencyObject;
         //Create a level counter with value set to -1
@@ -95,7 +95,7 @@ namespace X13.UI {
             //Increase the level counter
             Level++;
         //Return the indentation as a double
-        return Indentation * Level;
+        return new Thickness(1+Indentation * Level, 2, 0, 2);
       }
       //Type conversion is not supported
       throw new NotSupportedException(
