@@ -9,29 +9,25 @@ namespace X13.model {
   internal class TopicM : PropertyM, IDisposable {
     #region static
     private static char[] _delmiter=new char[] { '/' };
-    private static Action<string, string, string> _re2;
+    private static System.Windows.Threading.DispatcherTimer _ipqTimer;
     public static readonly TopicM root;
 
     static TopicM() {
       root=new TopicM(null, WsClient.instance.Info);
-      WsClient.instance.Event+=RcvEvent;
-      _re2=new Action<string, string, string>(RcvEvent2);
+      _ipqTimer=new System.Windows.Threading.DispatcherTimer(new TimeSpan(900000), System.Windows.Threading.DispatcherPriority.Background, ProcMsgs, System.Windows.Application.Current.Dispatcher);
     }
-
-    static void RcvEvent(string path, string payload, string options) {
-      if(System.Windows.Application.Current!=null) {
-        System.Windows.Application.Current.Dispatcher.BeginInvoke(_re2, path, payload, options);
-      }
-    }
-    static void RcvEvent2(string path, string payload, string options) {
-      if(string.IsNullOrEmpty(payload)) {
-        var t=root.Get(path, false);
-        if(t!=null) {
-          t.Remove(false);
+    private static void ProcMsgs(object sender, EventArgs e) {
+      Tuple<string, string, string> msg;
+      while(WsClient.instance.Poll(out msg)) {
+        if(string.IsNullOrEmpty(msg.Item2)) {
+          var t=root.Get(msg.Item1, false);
+          if(t!=null) {
+            t.Remove(false);
+          }
+        } else {
+          var t=root.Get(msg.Item1);
+          t.SetValue(JSON.parse(msg.Item2, null));
         }
-      } else {
-        var t=root.Get(path);
-        t.SetValue(JSON.parse(payload, null));
       }
     }
     #endregion static

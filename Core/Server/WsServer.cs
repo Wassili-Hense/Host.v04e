@@ -66,10 +66,10 @@ namespace X13.Server {
     void ChangedEvent(Topic s, Perform p) {
       if((p.art==Perform.Art.changed && p.prim!=_owner) || p.art==Perform.Art.subscribe || (p.art==Perform.Art.create && p.prim==_owner)){
         string json=s.ToJson();
-        X13.lib.Log.Debug("Pub({0}, {1})", s.path, json);
+        X13.lib.Log.Debug("Event({0}, {1})", s.path, json);
         _rcvEvent(s.path, json, null);
       } else if(p.art==Perform.Art.remove) {
-        X13.lib.Log.Debug("Pub({0}, , Remove)", s.path);
+        X13.lib.Log.Debug("Event({0}, , Remove)", s.path);
         _rcvEvent(s.path, null, null);
       }
     }
@@ -96,11 +96,11 @@ namespace X13.Server {
       if(string.IsNullOrEmpty(payload)) {
         var tmp=_owner.Get(path, false, _owner);
         tmp.Remove(_owner);
-        X13.lib.Log.Debug("Event({0}, , Remove)", path);
+        X13.lib.Log.Debug("Publish({0}, , Remove)", path);
       } else {
         var tmp=_owner.Get(path, true, _owner);
         tmp.SetJson(payload, _owner);
-        X13.lib.Log.Debug("Event({0}, {1})", path, payload);
+        X13.lib.Log.Debug("Publish({0}, {1})", path, payload);
       }
     }
 
