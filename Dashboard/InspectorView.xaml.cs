@@ -46,47 +46,52 @@ namespace X13.UI {
 
     private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
       StackPanel p;
-      MenuItem mi;
+      MenuItem mi1, mi2;
       PropertyM v;
 
       if((p=sender as StackPanel)!=null && (v=p.DataContext as PropertyM)!=null) {
         var items=p.ContextMenu.Items;
         if(v.ViewType==ViewTypeEn.Object) {
-          mi=new MenuItem() { Header="Add child", Tag="A" };
-          mi.Click+=ContextMenuClick;
-          items.Add(mi);
+          mi2=new MenuItem() { Header="Add child", Tag="A" };
+          mi2.Click+=ContextMenuClick;
+          items.Add(mi2);
         }
 
-        var va=new MenuItem() { Header="View As" };
+        mi1=new MenuItem() { Header="View As" };
 
-        mi=new MenuItem() { Header="Bool", Tag="#"+ViewTypeEn.Bool };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="Bool", Tag="#"+ViewTypeEn.Bool };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        mi=new MenuItem() { Header="Long", Tag="#"+ViewTypeEn.Int };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="Long", Tag="#"+ViewTypeEn.Int };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        mi=new MenuItem() { Header="Double", Tag="#"+ViewTypeEn.Double };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="Double", Tag="#"+ViewTypeEn.Double };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        mi=new MenuItem() { Header="DateTime", Tag="#"+ViewTypeEn.DateTime };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="DateTime", Tag="#"+ViewTypeEn.DateTime };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        mi=new MenuItem() { Header="String", Tag="#"+ViewTypeEn.String };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="String", Tag="#"+ViewTypeEn.String };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        mi=new MenuItem() { Header="Object", Tag="#"+ViewTypeEn.Object };
-        mi.Click+=ContextMenuClick;
-        va.Items.Add(mi);
+        mi2=new MenuItem() { Header="Object", Tag="#"+ViewTypeEn.Object };
+        mi2.Click+=ContextMenuClick;
+        mi1.Items.Add(mi2);
 
-        items.Add(va);
-        mi=new MenuItem() { Header="Remove", Tag="R" };
-        mi.Click+=ContextMenuClick;
-        items.Add(mi);
+        items.Add(mi1);
+
+        mi2=new MenuItem() { Header="Rename", Tag="r" };
+        mi2.Click+=ContextMenuClick;
+        items.Add(mi2);
+
+        mi2=new MenuItem() { Header="Remove", Tag="R" };
+        mi2.Click+=ContextMenuClick;
+        items.Add(mi2);
       }
 
     }
@@ -100,6 +105,8 @@ namespace X13.UI {
           v.ViewType=cmd.Substring(1);
         } else if(cmd[0]=='A') {
           v.AddProperty();
+        }else if(cmd[0]=='r'){
+          v.StartRename();
         } else if(cmd[0]=='R') {
           v.Remove(true);
         }
@@ -135,13 +142,18 @@ namespace X13.UI {
         //selectMethod.Invoke(z1, new object[] { true });
       }
     }
+    private void tbItemName_Loaded(object sender, RoutedEventArgs e) {
+      tbItemName_FocusableChanged(sender, new DependencyPropertyChangedEventArgs() );
+    }
 
-    private void tbNameLoaded(object sender, RoutedEventArgs e) {
-      var mi=sender as TextBox;
-      TopicM it;
+    private void tbItemName_FocusableChanged(object sender, DependencyPropertyChangedEventArgs e) {
+      var tb=sender as TextBox;
       PropertyM v;
-      if(mi!=null && (((v=mi.DataContext as PropertyM)!=null && v.EditName) || ((it=mi.DataContext as TopicM)!=null && it.EditName))) {
-        mi.Focus();
+      if(tb!=null && tb.Focusable && (v=tb.DataContext as PropertyM)!=null && v.EditName) {
+        if(!string.IsNullOrEmpty(tb.Text)) {
+          tb.SelectAll();
+        }
+        tb.Focus();
       }
     }
 
@@ -149,7 +161,7 @@ namespace X13.UI {
       var tb=sender as TextBox;
       PropertyM v;
       if(tb!=null && (v=tb.DataContext as PropertyM)!=null && v.EditName) {
-        v.Remove(false);
+        v.SetName(null);
       }
     }
 
@@ -162,13 +174,10 @@ namespace X13.UI {
         tbItemName_LostKeyboardFocus(sender, null);
         e.Handled=true;
       } else if(e.Key==Key.Enter) {
-        TopicM it;
         PropertyM v;
         try {
           if((v=tb.DataContext as PropertyM)!=null && v.EditName) {
             v.SetName(tb.Text);
-          } else if((it=tb.DataContext as TopicM)!=null && it.EditName) {
-            it.SetName(tb.Text);
           }
         }
         catch(ArgumentException ex) {
@@ -176,9 +185,7 @@ namespace X13.UI {
         }
         e.Handled=true;
       }
-
     }
-
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {

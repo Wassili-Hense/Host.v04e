@@ -203,8 +203,9 @@
                 </my:TreeListViewExpander>
                 <!--Display the name of the DataElement-->
                 <TextBox x:Name="tbItemName" Text="{Binding Name, Mode=OneWay}" Grid.Column="1" BorderThickness="1,0,0,0" BorderBrush="Gainsboro"
-                         VerticalAlignment="Stretch" Loaded="tbNameLoaded" LostKeyboardFocus="tbItemName_LostKeyboardFocus" 
-                         VerticalContentAlignment="Center" PreviewKeyDown="tbItemName_PreviewKeyDown">
+                         VerticalAlignment="Stretch" VerticalContentAlignment="Center" 
+                         LostKeyboardFocus="tbItemName_LostKeyboardFocus" PreviewKeyDown="tbItemName_PreviewKeyDown" 
+                         FocusableChanged="tbItemName_FocusableChanged" Loaded="tbItemName_Loaded">
                   <TextBox.Style>
                     <Style TargetType="TextBox">
                       <Setter Property="Focusable"  Value="False" />
@@ -213,10 +214,10 @@
                       <Setter Property="Cursor" Value="Arrow" />
                       <Style.Triggers>
                         <DataTrigger Binding="{Binding EditName}" Value="True">
-                          <Setter Property="Focusable"  Value="True" />
                           <Setter Property="IsReadOnly" Value="False" />
                           <Setter Property="Background" Value="AliceBlue" />
                           <Setter Property="Cursor" Value="IBeam" />
+                          <Setter Property="Focusable"  Value="True" />
                         </DataTrigger>
                       </Style.Triggers>
                     </Style>

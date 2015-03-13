@@ -163,26 +163,44 @@ namespace X13.model {
         this.RaisePropertyChanged("Expanded");
       }
     }
+    public void StartRename() {
+      EditName=true;
+      RaisePropertyChanged("EditName");
+    }
     public virtual void SetName(string nname) {
-      this.Name=nname;
-      if(_parent._value.Value==null || _parent._value==JSObject.Undefined) {
-        _parent._value=JSON.parse("{ }");
+      if(!EditName) {
+        return;
       }
-      _value=_parent._value.DefineMember(Name);
-      int i, j;
-      for(i=_parent.Properties.Count-1; i>=0; i--) {
-        j=string.Compare(_parent.Properties[i].Name, this.Name);
-        if(j==0) {
-          i=-1-i;
-          break;
-        }
-        if(j<0) {
-          break;
-        }
+      if(nname==null) {
+        nname=this.Name;
       }
-      //i++;
-      if(i>=0) {
-        _parent.Properties.Move(0, i);
+      if(string.IsNullOrEmpty(Name)) {
+        if(string.IsNullOrEmpty(nname)) {
+          this.Remove(false);
+        } else {
+          this.Name=nname;
+          if(_parent._value.Value==null || _parent._value==JSObject.Undefined) {
+            _parent._value=JSON.parse("{ }");
+          }
+          _value=_parent._value.DefineMember(Name);
+          int i, j;
+          for(i=_parent.Properties.Count-1; i>=0; i--) {
+            j=string.Compare(_parent.Properties[i].Name, this.Name);
+            if(j==0) {
+              i=-1-i;
+              break;
+            }
+            if(j<0) {
+              break;
+            }
+          }
+          //i++;
+          if(i>=0) {
+            _parent.Properties.Move(0, i);
+          }
+        }
+      } else {
+
       }
       EditName=false;
       RaisePropertyChanged("EditName");

@@ -189,9 +189,9 @@ namespace X13.PLC {
       if(string.IsNullOrEmpty(nName)) {
         nName=this.name;
       }
-      if(nParent.Exist(nName)) {
-        throw new ArgumentException(string.Concat(this.path, ".Move(", nParent.path, "/", nName, ") - destination already exist"));
-      }
+      //if(nParent.Exist(nName)) {
+      //  throw new ArgumentException(string.Concat(this.path, ".Move(", nParent.path, "/", nName, ") - destination already exist"));
+      //}
       Topic dst=new Topic(nParent, nName);
       lock(nParent._children) {
         nParent._children[nName]=dst;

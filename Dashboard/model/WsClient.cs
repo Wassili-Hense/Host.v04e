@@ -1,4 +1,7 @@
-﻿using System;
+﻿using NiL.JS.Core;
+using NiL.JS.Core.Modules;
+using JST = NiL.JS.Core.BaseTypes;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +17,11 @@ namespace X13.model {
     }
 
     private WsConnection _conn;
-    private ConcurrentQueue<Tuple<string, string, string>> _ipq;
+    private ConcurrentQueue<JST.Array> _ipq;
 
     private WsClient() {
-      _ipq=new ConcurrentQueue<Tuple<string, string, string>>();
-      _conn=WsServer.instance.Connect(RcvEvent);
+      _ipq=new ConcurrentQueue<JST.Array>();
+      _conn=WsServer.instance.Connect(RcvMsg);
     }
     public string Info { get { return "local"; } }
 
@@ -35,7 +38,7 @@ namespace X13.model {
     public void Publish(string path, string payload, string options=null) {
       _conn.Publish(path, payload, options);
     }
-    public bool Poll(out Tuple<string, string, string> msg) {
+    public bool Poll(out JST.Array msg) {
       return _ipq.TryDequeue(out msg);
     }
     public void Dispose() {
@@ -46,9 +49,21 @@ namespace X13.model {
       }
     }
 
-    private void RcvEvent(string path, string payload, string options=null) {
-      _ipq.Enqueue(new Tuple<string, string, string>(path, payload, options));
+    private void RcvMsg(string json) {
+      try {
+        var jo=JSON.parse(json) as JST.Array;
+        if(jo!=null && jo.length.As<int>()>0 && jo["0"].IsNumber) {
+          _ipq.Enqueue(jo);
+        }
+        X13.lib.Log.Debug("Rcv: {0}", json);
+      }
+      catch(Exception ex) {
+        X13.lib.Log.Debug("RcvMsg({0}) - {1}", json, ex.Message);
+      }
     }
 
+    internal void Move(string path, string parentPath, string nname) {
+      _conn.Move(path, parentPath, nname);
+    }
   }
 }

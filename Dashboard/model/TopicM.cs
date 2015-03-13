@@ -1,4 +1,5 @@
 ﻿using NiL.JS.Core.Modules;
+using JST = NiL.JS.Core.BaseTypes;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,16 +18,68 @@ namespace X13.model {
       _ipqTimer=new System.Windows.Threading.DispatcherTimer(new TimeSpan(900000), System.Windows.Threading.DispatcherPriority.Background, ProcMsgs, System.Windows.Application.Current.Dispatcher);
     }
     private static void ProcMsgs(object sender, EventArgs e) {
-      Tuple<string, string, string> msg;
+      JST.Array msg;
+      int len;
       while(WsClient.instance.Poll(out msg)) {
-        if(string.IsNullOrEmpty(msg.Item2)) {
-          var t=root.Get(msg.Item1, false);
-          if(t!=null) {
-            t.Remove(false);
+        int cmd=msg["0"].As<int>();
+        len=msg.length.As<int>();
+        switch(cmd) {
+        case 36: {
+            string path=msg["1"].As<string>();
+            if(string.IsNullOrEmpty(path)) {
+              break;
+            }
+            if(len>2) {     // [Event, "path", value, options]
+              var t=root.Get(path);
+              t.SetValue(msg["2"]);
+            } else if(len==2) {  //[Event, "path"] - remove
+              var t=root.Get(path, false);
+              if(t!=null) {
+                t.Remove(false);
+              }
+            }
           }
-        } else {
-          var t=root.Get(msg.Item1);
-          t.SetValue(JSON.parse(msg.Item2, null));
+          break;
+        case 40:
+          if(len==4){
+            string opath=msg["1"].As<string>();
+            string npath=msg["2"].As<string>();
+            string nname=msg["3"].As<string>();
+            TopicM ot, np;
+            if(!string.IsNullOrEmpty(opath) && !string.IsNullOrEmpty(nname) && (ot=root.Get(opath, false))!=null) {
+              np=ot._parent as TopicM;
+              if(string.IsNullOrEmpty(npath) || npath==np.Path) {
+                int j=-1-np.IndexOf(ot.Name);
+                if(j<0) {
+                  X13.lib.Log.Warning("Move({0}, {1}, {2}) - source not found", opath, npath, nname);
+                  break;
+                }
+                int i=np.IndexOf(nname);
+                if(i==j) {  // position is not changed
+                  // do nothing
+                } else if(i>=0) {
+                  np._children.Move(j, i);
+                } else {    // name already exist
+                  i=-1-i;
+                  np._children[i].Remove(false);
+                  np._children.Move(i<j?j-1:j, i);
+                }
+              } else {
+                (ot._parent as TopicM)._children.Remove(ot);
+                ot._parent=np;
+                np=root.Get(npath, true);
+                int i=np.IndexOf(nname);
+                if(i>=0) {
+                  np._children.Insert(i, ot);
+                } else {
+                  np._children[1-i]=ot;
+                }
+              }
+              ot.Name=nname;
+              ot.RaisePropertyChanged("Name");
+            }
+          }
+          break;
         }
       }
     }
@@ -37,18 +90,19 @@ namespace X13.model {
 
     private TopicM(TopicM parent, string name)
       : base(parent, name) {
-        if(parent!=null && (parent._subscribed & 2)==0) {
-          WsClient.instance.Subscribe(this.Path, 1);
-          _subscribed|=1;
-        }
+      if(parent!=null && (parent._subscribed & 2)==0) {
+        WsClient.instance.Subscribe(this.Path, 1);
+        _subscribed|=1;
+      }
     }
 
     public ObservableCollection<TopicM> Children {
       get {
         if(_children==null) {
           _children=new ObservableCollection<TopicM>();
+          this.RaisePropertyChanged("Children");
         }
-        if((_subscribed&2)==0){
+        if((_subscribed&2)==0) {
           WsClient.instance.Subscribe(this.Path, 2);    // path/+
           _subscribed|=2;
         }
@@ -119,13 +173,30 @@ namespace X13.model {
       Children.Insert(0, new TopicM(this, string.Empty));
     }
     public override void SetName(string nname) {
-      if(string.IsNullOrEmpty(Name)) {   // Create
-        Name=nname;
-        WsClient.instance.Create(this.Path, "undefined");
-        this.Remove(false);
-      } else {    // rename
-        //TODO: rename
+      if(!EditName) {
+        return;
       }
+      if(nname==null) {
+        nname=this.Name;
+      }
+      if(string.IsNullOrEmpty(Name)) {
+        if(string.IsNullOrEmpty(nname)) {  // create, chancel
+          this.Remove(false);
+        } else {      // create
+          Name=nname;
+          WsClient.instance.Create(this.Path, "undefined");
+          this.Remove(false);
+        }
+      } else {  // rename
+        if(nname==Name) {  // rename, chancel
+
+        } else {          // rename
+          WsClient.instance.Move(this.Path, (_parent as TopicM).Path, nname);
+        }
+      }
+      EditName=false;
+      RaisePropertyChanged("EditName");
+      RaisePropertyChanged("Name");
     }
     protected override void Publish() {
       string json=JSON.stringify(_value, null, null);
@@ -155,6 +226,24 @@ namespace X13.model {
 
     public void Dispose() {
       WsClient.instance.Unsubscribe(this.Path, _subscribed); // path/+
+    }
+
+    private int IndexOf(string name) {
+      int i, j;
+      if(_children==null) {
+        _children=new ObservableCollection<TopicM>();
+      }
+      for(i=_children.Count-1; i>=0; i--) {
+        j=string.Compare(_children[i].Name, name);
+        if(j==0) {
+          i=-1-i;
+          break;
+        }
+        if(j<0) {
+          break;
+        }
+      }
+      return i;
     }
   }
   public enum Projection {

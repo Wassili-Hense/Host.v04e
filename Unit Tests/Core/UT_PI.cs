@@ -619,6 +619,11 @@ namespace UnitTests.Core {
       Assert.AreEqual(6, a1_q_t.As<int>());
 
     }
-
+    [TestMethod]
+    public void T99() {
+      //var jo=new NiL.JS.Core.BaseTypes.String("Hi \x0c w!");
+      //var json=NiL.JS.Core.Modules.JSON.stringify(jo, null, null);
+      //var jso=NiL.JS.Core.Modules.JSON.parse("[1,\"/test/a1\",,{ }]");
+    }
   }
 }

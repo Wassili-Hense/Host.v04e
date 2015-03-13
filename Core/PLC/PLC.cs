@@ -343,7 +343,7 @@ namespace X13.PLC {
           int idx = EnquePerf(c)-1;
           while(idx >= 0) {
             Perform c1 = _prOp[idx--];
-            if(c1.src == c.src && (c1.art == Perform.Art.set || c1.art==Perform.Art.set)) {
+            if(c1.src == c.src && (c1.art == Perform.Art.set || c1.art==Perform.Art.setJson)) {
               var p = Perform.Create(t, c1.art, c1.prim);
               p.o = c1.o;
               p.i = c1.i;
