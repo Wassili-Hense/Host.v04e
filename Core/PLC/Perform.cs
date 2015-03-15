@@ -56,7 +56,7 @@ namespace X13.PLC {
           return p1.CompareTo(p2);
         }
       }
-      return -1;
+      return -1;  // для различных топиков с однаковым layer - this<other ( сохраняется порядок поступления)
     }
     public override string ToString() {
       return string.Concat(src.path, "[", art.ToString(), ", ", layer.ToString() , "]=", o==null?"null":o.ToString());

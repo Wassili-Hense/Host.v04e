@@ -62,7 +62,7 @@ namespace X13.model {
                 } else {    // name already exist
                   i=-1-i;
                   np._children[i].Remove(false);
-                  np._children.Move(i<j?j-1:j, i);
+                  np._children.Move(i<j?j-1:j, i>j?i-1:i);
                 }
               } else {
                 (ot._parent as TopicM)._children.Remove(ot);
@@ -77,6 +77,9 @@ namespace X13.model {
               }
               ot.Name=nname;
               ot.RaisePropertyChanged("Name");
+              ot.RaisePropertyChanged("Path");
+              ot.RaisePropertyChanged("ContentId");
+              ot.RaisePropertyChanged("NameList");
             }
           }
           break;
@@ -154,6 +157,7 @@ namespace X13.model {
                 throw new ArgumentException("path ("+Path+") is not valid");
               }
               next=new TopicM(cur, pe[i]);
+              X13.lib.Log.Debug("{0}.Get({1}) - new({2})", this.Path, p, next.Path);
               int idx;
               for(idx=0; idx<cur._children.Count; idx++) {
                 if(!cur._children[idx].EditName && string.Compare(cur._children[idx].Name, pe[i])>0) {

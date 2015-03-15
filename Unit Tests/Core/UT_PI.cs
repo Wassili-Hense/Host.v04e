@@ -286,10 +286,10 @@ namespace UnitTests.Core {
       Assert.AreEqual("C3", c3.name);
       Assert.AreEqual(91.02, c3.As<double>());
       Assert.AreEqual(2, cmds1.Count);
-      Assert.AreEqual(b3, cmds1[1].src);
-      Assert.AreEqual(Perform.Art.move, cmds1[1].art);
-      Assert.AreEqual(c3, cmds1[0].src);
-      Assert.AreEqual(Perform.Art.create, cmds1[0].art);
+      Assert.AreEqual(b3, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.move, cmds1[0].art);
+      Assert.AreEqual(c3, cmds1[1].src);
+      Assert.AreEqual(Perform.Art.create, cmds1[1].art);
       cmds1.Clear();
 
       var c3_a=c3.Get("A");
@@ -308,12 +308,12 @@ namespace UnitTests.Core {
       Assert.AreEqual("/D3/A", c3_a.path);
       Assert.AreEqual(9577, c3_a.As<long>());
       Assert.AreEqual(3, cmds1.Count);
-      Assert.AreEqual(c3, cmds1[2].src);
-      Assert.AreEqual(Perform.Art.move, cmds1[2].art);
-      Assert.AreEqual(d3, cmds1[0].src);
-      Assert.AreEqual(Perform.Art.create, cmds1[0].art);
-      Assert.AreEqual(c3_a, cmds1[1].src);
+      Assert.AreEqual(c3, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.move, cmds1[0].art);
+      Assert.AreEqual(d3, cmds1[1].src);
       Assert.AreEqual(Perform.Art.create, cmds1[1].art);
+      Assert.AreEqual(c3_a, cmds1[2].src);
+      Assert.AreEqual(Perform.Art.create, cmds1[2].art);
       cmds1.Clear();
 
       d3.Set(17);

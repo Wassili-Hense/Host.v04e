@@ -337,7 +337,8 @@ namespace X13.PLC {
               }
             }
             t1.path = t1.parent == Topic.root ? string.Concat("/", t1.name) : string.Concat(t1.parent.path, "/", t1.name);
-            EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
+            DoCmd(Perform.Create(t1, Perform.Art.create, c.prim), false);
+            //EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
           }
 
           int idx = EnquePerf(c)-1;
