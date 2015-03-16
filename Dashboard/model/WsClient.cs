@@ -10,6 +10,10 @@ using X13.Server;
 
 namespace X13.model {
   internal class WsClient : IDisposable {
+    private static string JsEnc(string s) {
+      return System.Web.HttpUtility.JavaScriptStringEncode(s, true);
+    }
+
     public static readonly WsClient instance;
 
     static WsClient() {
@@ -64,6 +68,9 @@ namespace X13.model {
 
     internal void Move(string path, string parentPath, string nname) {
       _conn.Move(path, parentPath, nname);
+    }
+    internal void Copy(string path, string parentPath, string nname) {
+      _conn.RcvMsg("[18,"+JsEnc(path) + "," + JsEnc(parentPath) + "," + JsEnc(nname) +"]");
     }
   }
 }

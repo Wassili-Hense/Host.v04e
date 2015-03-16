@@ -1,4 +1,6 @@
-﻿using System;
+﻿using NiL.JS.Core.Modules;
+using JST = NiL.JS.Core.BaseTypes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -43,7 +45,7 @@ namespace X13.Server {
     private static string JsEnc(string s) {
       return System.Web.HttpUtility.JavaScriptStringEncode(s, true);
     }
-    
+
     private Action<string> _rcvEvent;
     private Topic _owner;
 
@@ -67,8 +69,8 @@ namespace X13.Server {
       X13.lib.Log.Debug("Subscribe({0}{1})", path, m);
     }
 
-    void ChangedEvent(Topic s, Perform p) {
-      if((p.art==Perform.Art.changed && p.prim!=_owner) || p.art==Perform.Art.subscribe || (p.art==Perform.Art.create && p.prim==_owner)){
+    private void ChangedEvent(Topic s, Perform p) {
+      if((p.art==Perform.Art.changed && p.prim!=_owner) || p.art==Perform.Art.subscribe || (p.art==Perform.Art.create && p.prim==_owner)) {
         string json=s.ToJson();
         _rcvEvent("[36,"+ JsEnc(s.path) + ","+ json +"]");
       } else if(p.art==Perform.Art.remove) {
@@ -80,6 +82,27 @@ namespace X13.Server {
         }
       }
     }
+    public void RcvMsg(string json) {
+      try {
+        var msg=JSON.parse(json) as JST.Array;
+        if(msg!=null && msg.length.As<int>()>0 && msg["0"].IsNumber) {
+          int cmd=msg["0"].As<int>();
+          int len=msg.length.As<int>();
+          switch(cmd) {
+          case 18:    // Copy
+            if(len==4) {
+              Copy(msg["1"].As<string>(), msg["2"].As<string>(), msg["3"].As<string>());
+            }
+            break;
+          }
+        }
+        X13.lib.Log.Debug("{0} > {1}", _owner==null?"Unk":_owner.path, json);
+      }
+      catch(Exception ex) {
+        X13.lib.Log.Debug("{0} > {1} - {2}", _owner==null?"Unk":_owner.path, json, ex.Message);
+      }
+    }
+
 
     public void Unsubscribe(string path, int mask) {
       var tmp=_owner.Get(path, false, _owner);
@@ -112,17 +135,32 @@ namespace X13.Server {
         X13.lib.Log.Debug("Publish({0}, {1})", path, payload);
       }
     }
-
     public void Create(string path, string payload, string options) {
       var tmp=_owner.Get(path, true, _owner);
     }
-
     public void Move(string path, string parentPath, string nname) {
       Topic o, p;
       if((o=_owner.Get(path, false, _owner))!=null && (p=_owner.Get(parentPath, false, _owner))!=null) {
         o.Move(p, nname, _owner);
       }
       X13.lib.Log.Debug("Move({0}, {1}, {2})", path, parentPath, nname);
+    }
+    private void Copy(string opath, string parentPath, string nname) {
+      Topic ot, np, nt, n;
+      if(string.IsNullOrEmpty(opath) || string.IsNullOrEmpty(nname) || string.IsNullOrEmpty(parentPath) || (ot=_owner.Get(opath, false, _owner))==null || parentPath==ot.parent.path) {
+        return;
+      }
+      np=_owner.Get(parentPath, true, _owner);
+      nt=np.Get(nname, true, _owner);
+      int opLen=ot.path.Length+1;
+      foreach(var t in ot.all) {
+        if(t==ot) {
+          n=nt;
+        } else {
+          n=nt.Get(t.path.Substring(opLen), true, _owner);
+        }
+        n.SetJson(t.ToJson(), _owner);
+      }
     }
   }
 }

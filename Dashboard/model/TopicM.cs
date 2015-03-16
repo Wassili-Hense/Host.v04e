@@ -14,7 +14,7 @@ namespace X13.model {
     public static readonly TopicM root;
 
     static TopicM() {
-      root=new TopicM(null, WsClient.instance.Info);
+      root=new TopicM(null, WsClient.instance.Info);  // TODO: Для каждого клиента свой root
       _ipqTimer=new System.Windows.Threading.DispatcherTimer(new TimeSpan(900000), System.Windows.Threading.DispatcherPriority.Background, ProcMsgs, System.Windows.Application.Current.Dispatcher);
     }
     private static void ProcMsgs(object sender, EventArgs e) {
@@ -66,13 +66,13 @@ namespace X13.model {
                 }
               } else {
                 (ot._parent as TopicM)._children.Remove(ot);
-                ot._parent=np;
                 np=root.Get(npath, true);
+                ot._parent=np;
                 int i=np.IndexOf(nname);
                 if(i>=0) {
                   np._children.Insert(i, ot);
                 } else {
-                  np._children[1-i]=ot;
+                  np._children[-1-i]=ot;
                 }
               }
               ot.Name=nname;
@@ -97,6 +97,9 @@ namespace X13.model {
         WsClient.instance.Subscribe(this.Path, 1);
         _subscribed|=1;
       }
+      if(parent==null) {
+        IsRoot=true;
+      }
     }
 
     public ObservableCollection<TopicM> Children {
@@ -118,6 +121,7 @@ namespace X13.model {
     public Projection View { get; set; }
     public IEnumerable<TopicM> NameList { get { return _parent==null?(new TopicM[] { this }):(_parent as TopicM).NameList.Union(new TopicM[] { this }); } }
 
+    public bool IsRoot { get; private set; }
     public int sizeX { get; set; }
     public int sizeY { get; set; }
     public double posX { get; set; }
@@ -201,6 +205,9 @@ namespace X13.model {
       EditName=false;
       RaisePropertyChanged("EditName");
       RaisePropertyChanged("Name");
+      RaisePropertyChanged("Path");
+      RaisePropertyChanged("ContentId");
+      RaisePropertyChanged("NameList");
     }
     protected override void Publish() {
       string json=JSON.stringify(_value, null, null);
@@ -224,8 +231,21 @@ namespace X13.model {
         }
       }
     }
-    public override string ToString() {
-      return Path;
+    public override string GetUri(string p) {
+      StringBuilder sb=new StringBuilder();
+      if(IsRoot){
+        sb.Append("x13://");
+      } else {
+        sb.Append(_parent.GetUri(null));
+        sb.Append("/");
+      }
+      sb.Append(Name);
+
+      if(p!=null) {
+        sb.Append("?");
+        sb.Append(p);
+      }
+      return sb.ToString();
     }
 
     public void Dispose() {

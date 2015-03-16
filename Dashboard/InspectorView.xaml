@@ -18,46 +18,40 @@
       <RowDefinition Height="Auto"/>
       <RowDefinition/>
     </Grid.RowDefinitions>
-    <Grid>
-      <Grid.ColumnDefinitions>
-        <ColumnDefinition/>
-        <ColumnDefinition Width="35"/>
-        <ColumnDefinition Width="35"/>
-      </Grid.ColumnDefinitions>
-      <ItemsControl ItemsSource="{Binding NameList}" Grid.Row="0" BorderThickness="0" Background="#00000000">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <StackPanel Orientation="Horizontal"/>
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate>
-            <StackPanel Orientation="Horizontal" MouseLeftButtonUp="PathMouseLBU" >
-              <Border BorderThickness="1" Margin="0" Padding="1, 1, 4, 1" Cursor="Hand">
-                <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}" VerticalAlignment="Center"  />
-                <Border.Style>
-                  <Style TargetType="Border">
-                    <Setter Property="Background" Value="#40FFFFFF" />
-                    <Setter Property="BorderBrush" Value="#807F7F7F" />
-                    <Style.Triggers>
-                      <Trigger Property="IsMouseOver" Value="True">
-                        <Setter Property="Background" Value="#80FFFFFF" />
-                        <Setter Property="BorderBrush" Value="Black" />
-                      </Trigger>
-                    </Style.Triggers>
-                  </Style>
-                </Border.Style>
-              </Border>
-              <TextBlock Text="/" VerticalAlignment="Center"  />
-            </StackPanel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-      <Button Grid.Column="1" Content="+" Background="Transparent" FontSize="16" FontWeight="Black" Margin="3, 1" Click="AddItemClick" ></Button>
-      <Button Grid.Column="2" Background="Transparent"  Margin="3, 1"></Button>
-    </Grid>
+    <ItemsControl ItemsSource="{Binding NameList}" BorderThickness="0" Background="#00000000">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal"/>
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <StackPanel Orientation="Horizontal" MouseLeftButtonUp="PathMouseLRBU" MouseRightButtonUp="PathMouseLRBU" >
+            <Border BorderThickness="1" Margin="0" Padding="1, 1, 4, 1" Cursor="Hand">
+              <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}" VerticalAlignment="Center"  />
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Background" Value="#40FFFFFF" />
+                  <Setter Property="BorderBrush" Value="#807F7F7F" />
+                  <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter Property="Background" Value="#80FFFFFF" />
+                      <Setter Property="BorderBrush" Value="Black" />
+                    </Trigger>
+                    <DataTrigger Binding="{Binding IsRoot}" Value="true">
+                      <Setter Property="Background" Value="#408090FF" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+            </Border>
+            <TextBlock Text="/" VerticalAlignment="Center"  />
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
 
-    <my:TreeListView Grid.Row="1" x:Name="tlInspector" AllowsColumnReorder="False" ItemsSource="{Binding Children}">
+    <my:TreeListView Grid.Row="1" x:Name="tlInspector" AllowsColumnReorder="False" ItemsSource="{Binding Children}" MouseRightButtonUp="PathMouseLRBU">
       <my:TreeListView.Resources>
         <Style TargetType="GridViewColumnHeader" x:Key="WhHeader">
           <Setter Property="Background" Value="White" />
@@ -78,36 +72,26 @@
                 <Setter.Value>
                   <ControlTemplate TargetType="TreeViewItem">
                     <!--Grid containing the current information and the subnodes.-->
-                    <StackPanel ContextMenuOpening="StackPanel_ContextMenuOpening" ContextMenuClosing="StackPanel_ContextMenuClosing"  Background="White">
+                    <StackPanel Background="White">
                       <!--Border wrapping the content presenter.-->
-                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro">
+                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro" MouseUp="ItemMouseUp">
                         <!--GridViewRowPrsenter containing the current information.-->
                         <GridViewRowPresenter Content="{TemplateBinding Header}" Columns="{Binding Columns, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:TreeListView}}"/>
                       </Border>
                       <!--ItemsPresenter containing the subnodes-->
                       <ItemsPresenter x:Name="ItemsPresenter" Visibility="Collapsed"/>
-                      <StackPanel.ContextMenu>
-                        <ContextMenu  />
-                      </StackPanel.ContextMenu>
                     </StackPanel>
                     <ControlTemplate.Triggers>
                       <!--Trigger used to show the sub items-->
                       <Trigger Property="IsExpanded" Value="True">
                         <Setter TargetName="ItemsPresenter" Property="Visibility" Value="Visible"/>
                       </Trigger>
-                      <!--Trigger used to change the color based on selection
-                      <MultiTrigger>
-                        <MultiTrigger.Conditions>
-                          <Condition Property="IsSelected" Value="True"/>
-                          <Condition Property="IsSelectionActive" Value="True"/>
-                        </MultiTrigger.Conditions>
-                        <Setter TargetName="Border" Property="BorderBrush" Value="Black" />
-                      </MultiTrigger>-->
                     </ControlTemplate.Triggers>
                   </ControlTemplate>
                 </Setter.Value>
               </Setter>
               <Setter Property="IsExpanded" Value="{Binding Expanded}" />
+              <Setter Property="IsSelected" Value="{Binding IsSelected}" />
             </Style>
           </ControlTemplate.Resources>
           <!--Create a standard border around the 'TreeListView'.-->
@@ -155,7 +139,7 @@
           </GridViewColumn.HeaderContainerStyle>
           <GridViewColumn.CellTemplate>
             <DataTemplate>
-              <Grid MouseLeftButtonDown="StackPanel_MouseLeftButtonDown" >
+              <Grid MouseLeftButtonDown="ItemNameMouseLBD" >
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="auto"/>
                   <ColumnDefinition Width="*"/>
@@ -202,8 +186,7 @@
                   </my:TreeListViewExpander.Template>
                 </my:TreeListViewExpander>
                 <!--Display the name of the DataElement-->
-                <TextBox x:Name="tbItemName" Text="{Binding Name, Mode=OneWay}" Grid.Column="1" BorderThickness="1,0,0,0" BorderBrush="Gainsboro"
-                         VerticalAlignment="Stretch" VerticalContentAlignment="Center" 
+                <TextBox x:Name="tbItemName" Text="{Binding Name, Mode=OneWay}" Grid.Column="1" VerticalAlignment="Stretch" VerticalContentAlignment="Center" 
                          LostKeyboardFocus="tbItemName_LostKeyboardFocus" PreviewKeyDown="tbItemName_PreviewKeyDown" 
                          FocusableChanged="tbItemName_FocusableChanged" Loaded="tbItemName_Loaded">
                   <TextBox.Style>
@@ -212,6 +195,9 @@
                       <Setter Property="IsReadOnly" Value="True" />
                       <Setter Property="Background" Value="Transparent" />
                       <Setter Property="Cursor" Value="Arrow" />
+                      <Setter Property="BorderThickness" Value="1,0,0,0" />
+                      <Setter Property="BorderBrush" Value="Gainsboro" />
+                      <Setter Property="Margin" Value="2,0,0,0" />
                       <Style.Triggers>
                         <DataTrigger Binding="{Binding EditName}" Value="True">
                           <Setter Property="IsReadOnly" Value="False" />
@@ -219,6 +205,15 @@
                           <Setter Property="Cursor" Value="IBeam" />
                           <Setter Property="Focusable"  Value="True" />
                         </DataTrigger>
+                        <MultiDataTrigger>
+                          <MultiDataTrigger.Conditions>
+                            <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" Value="True" />
+                            <Condition Binding="{Binding IsSelectionActive, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=TreeViewItem}}" Value="True" />
+                          </MultiDataTrigger.Conditions>
+                          <Setter Property="BorderBrush" Value="Orange" />
+                          <Setter Property="BorderThickness" Value="3,0,0,0" />
+                          <Setter Property="Margin" Value="0,0,0,0" />
+                        </MultiDataTrigger>
                       </Style.Triggers>
                     </Style>
                   </TextBox.Style>

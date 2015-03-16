@@ -12,6 +12,7 @@ namespace X13.model {
     protected JSObject _value;
     private string _oType;
     private string _viewType;
+    private bool _isSelected;
 
     protected PropertyM(PropertyM parent, string name) {
       this.Name=name;
@@ -24,6 +25,15 @@ namespace X13.model {
     public ObservableCollection<PropertyM> Properties { get; private set; }
     public bool EditName { get; protected set; }
     public bool Expanded { get; set; }
+    public bool IsSelected {
+      get { return _isSelected; }
+      set {
+        if(value!=_isSelected) {
+          _isSelected=value;
+          RaisePropertyChanged("IsSelected");
+        }
+      }
+    }
     public string Name { get; protected set; }
     public JSObjectType ValueType {
       get {
@@ -200,10 +210,11 @@ namespace X13.model {
           }
         }
       } else {
-
+        // rename property ???
       }
       EditName=false;
       RaisePropertyChanged("EditName");
+      RaisePropertyChanged("Name");
     }
     public virtual void Remove(bool ext) {
       _parent._value[Name]=JSObject.Undefined;
@@ -269,9 +280,18 @@ namespace X13.model {
         propCh=true;
       }
     }
+    public virtual string GetUri(string p) {
+      string r;
+      if(p==null) {
+        r=string.Concat(_parent.GetUri(null), ".", Name);
+      } else {
+        r=string.Concat(_parent.GetUri(null), ".", Name, "?", p);
+      }
+      return r;
+    }
 
     public override string ToString() {
-      return _parent.ToString()+"."+Name;
+      return GetUri(null);
     }
   }
   internal static class ViewTypeEn {

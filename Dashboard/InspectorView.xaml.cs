@@ -23,38 +23,137 @@ namespace X13.UI {
       InitializeComponent();
     }
 
-    private void StackPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
-      if(e.ClickCount==2) {
-        var sp=sender as Grid;
-        TopicM m;
-        if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
-          e.Handled=true;
-          Workspace.This.AddFile(m);
-        }
-      }
-    }
-    private void PathMouseLBU(object sender, MouseButtonEventArgs e) {
-      var sp=sender as StackPanel;
+    private void PathMouseLRBU(object sender, MouseButtonEventArgs e) {
+      var sp=sender as FrameworkElement;
       TopicM m;
       if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
+        if(this.DataContext!=m) {
+          Workspace.This.AddFile(m);
+        } else {
+          FillContectMenu(sp, m, true);
+          if(sp.ContextMenu!=null && sp.ContextMenu.Items.Count>0) {
+            sp.ContextMenu.IsOpen=true;
+          }
+        }
+      }
+      e.Handled=true;
+    }
+    private void ItemMouseUp(object sender, MouseButtonEventArgs e) {
+      var sp=sender as FrameworkElement;
+      PropertyM m;
+      if(e.ClickCount==1 && e.ChangedButton==MouseButton.Right && sp!=null  && (m=sp.DataContext as PropertyM)!=null) {
+        m.IsSelected=true;
+        FillContectMenu(sp, m, false);
+        if(sp.ContextMenu!=null && sp.ContextMenu.Items.Count>0) {
+          sp.ContextMenu.IsOpen=true;
+        }
         e.Handled=true;
-        Workspace.This.AddFile(m);
+      }
+    }
+    private void Image_MouseUp(object sender, MouseButtonEventArgs e) {
+      var sp=sender as FrameworkElement;
+      PropertyM m;
+      if(e.ClickCount==1 && e.ChangedButton==MouseButton.Left && sp!=null  && (m=sp.DataContext as PropertyM)!=null) {
+        m.IsSelected=true;
+        FillContectMenu(sp, m, false);
+        if(sp.ContextMenu!=null && sp.ContextMenu.Items.Count>0) {
+          sp.ContextMenu.IsOpen=true;
+        }
+        e.Handled=true;
+      }
+    }
+
+    void ContextMenuClick(object sender, RoutedEventArgs e) {
+      MenuItem mi=sender as MenuItem;
+      PropertyM v;
+      string cmd;
+      if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && (v=mi.DataContext as PropertyM)!=null) {
+        switch(cmd[0]) {
+        case '#':
+          v.ViewType=cmd.Substring(1);
+          break;
+        case 'A':
+          v.AddProperty();
+          break;
+        case 'a':
+          //var z=
+          (v as TopicM).AddChild();
+          //var z1=this.tlInspector.ItemContainerGenerator.ContainerFromItem(z) as FrameworkElement;
+          //this.tlInspector.Focus();
+          //System.Reflection.MethodInfo selectMethod = typeof(TreeViewItem).GetMethod("Select", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+          //selectMethod.Invoke(z1, new object[] { true });
+          break;
+        case 'C':  // Cut
+          Clipboard.Clear();
+          Clipboard.SetText(v.GetUri("move"), TextDataFormat.UnicodeText);
+          break;
+        case 'c': // Copy
+          Clipboard.Clear();
+          Clipboard.SetText(v.GetUri("copy"), TextDataFormat.UnicodeText);
+          break;
+        case 'r':
+          v.StartRename();
+          break;
+        case 'P':  // Paste
+          if(Clipboard.ContainsText(TextDataFormat.UnicodeText)) {
+            try {
+              Uri r;
+              Uri.TryCreate(Clipboard.GetText(TextDataFormat.UnicodeText), UriKind.Absolute, out r);
+              TopicM src;
+              TopicM par;
+              if(r.Scheme=="x13" && (src=TopicM.root.Get(r.AbsolutePath, false))!=null && (par=v as TopicM)!=null) {
+                if(r.Query=="?copy") {
+                  WsClient.instance.Copy(src.Path, par.Path, src.Name);
+                } else if(r.Query=="?move") {
+                  WsClient.instance.Move(src.Path, par.Path, src.Name);
+                }
+              }
+            }
+            catch(Exception ex) {
+              X13.lib.Log.Debug("{0}.Paste({1}) - {2}", v.ToString(), Clipboard.GetText(), ex.Message);
+            }
+          }
+          break;
+        case 'R':
+          v.Remove(true);
+          break;
+        }
       }
       e.Handled=true;
     }
 
-
-    private void StackPanel_ContextMenuOpening(object sender, ContextMenuEventArgs e) {
-      StackPanel p;
-      MenuItem mi1, mi2;
-      PropertyM v;
-
-      if((p=sender as StackPanel)!=null && (v=p.DataContext as PropertyM)!=null) {
+    private void StackPanel_ContextMenuClosing(object sender, ContextMenuEventArgs e) {
+      var p=sender as FrameworkElement;
+      if(p!=null) {
         var items=p.ContextMenu.Items;
+        items.Clear();
+      }
+    }
+
+    private void FillContectMenu(FrameworkElement s, PropertyM v, bool header) {
+      MenuItem mi1, mi2;
+      bool isTopic=v is TopicM;
+      bool sep=false;
+
+      if(s.ContextMenu==null) {
+        s.ContextMenu=new ContextMenu();
+        s.ContextMenu.ContextMenuClosing+=StackPanel_ContextMenuClosing;
+      } else {
+        s.ContextMenu.Items.Clear();
+      }
+      s.ContextMenu.DataContext=v;
+
+      var items=s.ContextMenu.Items;
+
+      if(header) {
+        mi1=new MenuItem() { Header="Add", Tag="a" };
+        mi1.Click+=ContextMenuClick;
+        items.Add(mi1);
+      } else {
         if(v.ViewType==ViewTypeEn.Object) {
-          mi2=new MenuItem() { Header="Add child", Tag="A" };
-          mi2.Click+=ContextMenuClick;
-          items.Add(mi2);
+          mi1=new MenuItem() { Header="Add property", Tag="A" };
+          mi1.Click+=ContextMenuClick;
+          items.Add(mi1);
         }
 
         mi1=new MenuItem() { Header="View As" };
@@ -84,66 +183,66 @@ namespace X13.UI {
         mi1.Items.Add(mi2);
 
         items.Add(mi1);
-
-        mi2=new MenuItem() { Header="Rename", Tag="r" };
-        mi2.Click+=ContextMenuClick;
-        items.Add(mi2);
-
-        mi2=new MenuItem() { Header="Remove", Tag="R" };
-        mi2.Click+=ContextMenuClick;
-        items.Add(mi2);
       }
+      if(isTopic) {
+        if(!header) {
+          items.Add(new Separator());
+          sep=true;
 
-    }
+          mi1=new MenuItem() { Header="Cut", Tag="C" };
+          mi1.Click+=ContextMenuClick;
+          items.Add(mi1);
 
-    void ContextMenuClick(object sender, RoutedEventArgs e) {
-      MenuItem mi=sender as MenuItem;
-      PropertyM v;
-      string cmd;
-      if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && (v=mi.DataContext as PropertyM)!=null) {
-        if(cmd[0]=='#') {
-          v.ViewType=cmd.Substring(1);
-        } else if(cmd[0]=='A') {
-          v.AddProperty();
-        }else if(cmd[0]=='r'){
-          v.StartRename();
-        } else if(cmd[0]=='R') {
-          v.Remove(true);
+          mi1=new MenuItem() { Header="Copy", Tag="c" };
+          mi1.Click+=ContextMenuClick;
+          items.Add(mi1);
+        }
+        if(Clipboard.ContainsText(TextDataFormat.UnicodeText) && Clipboard.GetText(TextDataFormat.UnicodeText).StartsWith("x13://")) {
+          if(!sep) {
+            items.Add(new Separator());
+            sep=true;
+          }
+          mi1=new MenuItem() { Header="Paste", Tag="P" };
+          mi1.Click+=ContextMenuClick;
+          items.Add(mi1);
         }
       }
-      e.Handled=true;
-    }
 
-    private void StackPanel_ContextMenuClosing(object sender, ContextMenuEventArgs e) {
-      StackPanel p;
-      if((p=sender as StackPanel)!=null) {
-        var items=p.ContextMenu.Items;
-        items.Clear();
+      sep=false;
+
+      if(!isTopic || !(v as TopicM).IsRoot) {
+        items.Add(new Separator());
+        sep=true;
+
+        mi1=new MenuItem() { Header="Delete", Tag="R" };
+        mi1.Click+=ContextMenuClick;
+        items.Add(mi1);
+      }
+
+      if(isTopic && !header) {
+        if(!sep) {
+          items.Add(new Separator());
+          sep=true;
+        }
+        mi1=new MenuItem() { Header="Rename", Tag="r" };
+        mi1.Click+=ContextMenuClick;
+        items.Add(mi1);
       }
     }
 
-    private void Image_MouseUp(object sender, MouseButtonEventArgs e) {
-      Image p;
-      if(e.ClickCount==1 && e.ChangedButton==MouseButton.Left && (p=sender as Image)!=null) {
-        var c=p;
-        //TODO: show contextmenu
+    private void ItemNameMouseLBD(object sender, MouseButtonEventArgs e) {
+      if(e.ClickCount==2) {
+        var sp=sender as FrameworkElement;
+        TopicM m;
+        if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
+          e.Handled=true;
+          Workspace.This.AddFile(m);
+        }
       }
     }
 
-    private void AddItemClick(object sender, RoutedEventArgs e) {
-      TopicM it;
-      var s=sender as Button;
-      if(s!=null && (it=s.DataContext as TopicM)!=null) {
-        //var z=
-        it.AddChild();
-        //var z1=this.tlInspector.ItemContainerGenerator.ContainerFromItem(z) as FrameworkElement;
-        //this.tlInspector.Focus();
-        //System.Reflection.MethodInfo selectMethod = typeof(TreeViewItem).GetMethod("Select", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        //selectMethod.Invoke(z1, new object[] { true });
-      }
-    }
     private void tbItemName_Loaded(object sender, RoutedEventArgs e) {
-      tbItemName_FocusableChanged(sender, new DependencyPropertyChangedEventArgs() );
+      tbItemName_FocusableChanged(sender, new DependencyPropertyChangedEventArgs());
     }
 
     private void tbItemName_FocusableChanged(object sender, DependencyPropertyChangedEventArgs e) {
@@ -186,6 +285,7 @@ namespace X13.UI {
         e.Handled=true;
       }
     }
+
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {
     public object Convert(object[] values, System.Type targetType, object parameter, System.Globalization.CultureInfo culture) {
