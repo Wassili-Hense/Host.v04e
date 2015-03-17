@@ -19,6 +19,9 @@ namespace X13.UI {
   /// Interaktionslogik für InspectorView.xaml
   /// </summary>
   public partial class InspectorView : UserControl {
+    private Point _startPoint;
+    private bool _isDraging;
+
     public InspectorView() {
       InitializeComponent();
     }
@@ -50,6 +53,64 @@ namespace X13.UI {
         e.Handled=true;
       }
     }
+
+    private void ItemPreviewMLBD(object sender, MouseButtonEventArgs e) {
+      _startPoint = e.GetPosition(null);
+      _isDraging=true;
+    }
+    private void ItemMouseLeave(object sender, MouseEventArgs e) {
+      if(_isDraging && e.LeftButton==MouseButtonState.Pressed) {
+        Point position = e.GetPosition(null);
+
+        if(Math.Abs(position.X - _startPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(position.Y - _startPoint.Y) > SystemParameters.MinimumVerticalDragDistance) {
+          var sp=sender as FrameworkElement;
+          TopicM m;
+          if(sp!=null && (m=sp.DataContext as TopicM)!=null) {
+            DragDrop.DoDragDrop(this, new DataObject(DataFormats.UnicodeText.ToString(), m.GetUri("link")), DragDropEffects.Link);
+            _isDraging=false;
+          }
+        }
+      }
+    }
+    private void tlInspector_DragEnter(object sender, DragEventArgs e) {
+      string l;
+      if((l=e.Data.GetData(DataFormats.UnicodeText.ToString(), false) as string)!=null && l.StartsWith("x13://")) {
+        e.Effects=DragDropEffects.Link;
+      } else {
+        e.Effects = DragDropEffects.None;
+        e.Handled = true;
+      }
+    }
+    private void tlInspector_Drop(object sender, DragEventArgs e) {
+      string nname;
+      string l;
+      Uri srcU;
+      if((l=e.Data.GetData(DataFormats.UnicodeText.ToString(), false) as string)==null || !Uri.TryCreate(l, UriKind.Absolute, out srcU) || srcU.Scheme!="x13") {
+        return;
+      }
+      TopicM t=TopicM.root.Get(srcU.AbsolutePath , false);
+      TopicM p, n;
+      if(t==null || (p=this.DataContext as TopicM)==null) {
+        return;
+      }
+      nname=t.Parent!=null?(t.Parent.Name+"_"+t.Name):t.Name;
+      if((n=p.Get(nname, false))==null) {
+        n=p.Get(nname, true);
+      } else {
+        int i=0;
+        while((n=p.Get(nname+"_"+i.ToString(), false))!=null) {
+          i++;
+        }
+        n=p.Get(nname+"_"+i.ToString(), true);
+      }
+      var r=JSObject.CreateObject();
+      r["$type"]="PiAlias";
+      r["alias"]=t.Path;
+      n.Value=r;
+    }
+
+
     private void Image_MouseUp(object sender, MouseButtonEventArgs e) {
       var sp=sender as FrameworkElement;
       PropertyM m;
@@ -102,10 +163,14 @@ namespace X13.UI {
               TopicM src;
               TopicM par;
               if(r.Scheme=="x13" && (src=TopicM.root.Get(r.AbsolutePath, false))!=null && (par=v as TopicM)!=null) {
-                if(r.Query=="?copy") {
-                  WsClient.instance.Copy(src.Path, par.Path, src.Name);
-                } else if(r.Query=="?move") {
-                  WsClient.instance.Move(src.Path, par.Path, src.Name);
+                if(par.Path.StartsWith(src.Path)) {
+                  X13.lib.Log.Warning("Can't paste {0} in {1}", src.Path, par.Path);
+                } else {
+                  if(r.Query=="?copy") {
+                    WsClient.instance.Copy(src.Path, par.Path, src.Name);
+                  } else if(r.Query=="?move") {
+                    WsClient.instance.Move(src.Path, par.Path, src.Name);
+                  }
                 }
               }
             }
@@ -285,6 +350,7 @@ namespace X13.UI {
         e.Handled=true;
       }
     }
+
 
   }
   internal class GridColumnSpringConverter : IMultiValueConverter {

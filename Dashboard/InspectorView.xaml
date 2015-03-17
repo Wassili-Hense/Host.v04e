@@ -51,7 +51,8 @@
       </ItemsControl.ItemTemplate>
     </ItemsControl>
 
-    <my:TreeListView Grid.Row="1" x:Name="tlInspector" AllowsColumnReorder="False" ItemsSource="{Binding Children}" MouseRightButtonUp="PathMouseLRBU">
+    <my:TreeListView Grid.Row="1" x:Name="tlInspector" AllowsColumnReorder="False" ItemsSource="{Binding Children}" 
+                     MouseRightButtonUp="PathMouseLRBU" AllowDrop="True" DragEnter="tlInspector_DragEnter" Drop="tlInspector_Drop" DragOver="tlInspector_DragEnter">
       <my:TreeListView.Resources>
         <Style TargetType="GridViewColumnHeader" x:Key="WhHeader">
           <Setter Property="Background" Value="White" />
@@ -74,7 +75,7 @@
                     <!--Grid containing the current information and the subnodes.-->
                     <StackPanel Background="White">
                       <!--Border wrapping the content presenter.-->
-                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro" MouseUp="ItemMouseUp">
+                      <Border x:Name="Border" BorderThickness="0,0,0,1" BorderBrush="Gainsboro" MouseUp="ItemMouseUp" MouseLeave="ItemMouseLeave" PreviewMouseLeftButtonDown="ItemPreviewMLBD">
                         <!--GridViewRowPrsenter containing the current information.-->
                         <GridViewRowPresenter Content="{TemplateBinding Header}" Columns="{Binding Columns, RelativeSource={RelativeSource Mode=FindAncestor, AncestorType=my:TreeListView}}"/>
                       </Border>
