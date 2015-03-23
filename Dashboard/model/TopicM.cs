@@ -1,5 +1,5 @@
 ﻿using NiL.JS.Core.Modules;
-using JST = NiL.JS.Core.BaseTypes;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -211,7 +211,7 @@ namespace X13.model {
       RaisePropertyChanged("NameList");
     }
     protected override void Publish() {
-      string json=JSON.stringify(_value, null, null);
+      string json=JST.JSON.stringify(_value, null, null);
       if(string.IsNullOrEmpty(json)) {
         json="null";
       }

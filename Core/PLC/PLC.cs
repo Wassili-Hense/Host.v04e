@@ -1,5 +1,5 @@
 ﻿using NiL.JS.Core;
-using NiL.JS.Core.Modules;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -366,7 +366,7 @@ namespace X13.PLC {
         cmd.old_o = cmd.src._value;
         if(cmd.art == Perform.Art.setJson) {
           string json=(string)cmd.o;
-          var jso= JSON.parse(json);
+          var jso= JST.JSON.parse(json);
           JSObject ty;
           if(jso.ValueType==JSObjectType.Object && json!="null" && (ty=jso.GetMember("$type")).IsDefinded) {
             Func<JSObject, Topic, Topic, JSObject> f;
@@ -382,28 +382,28 @@ namespace X13.PLC {
         } else {
           switch(Type.GetTypeCode(cmd.o==null?null:cmd.o.GetType())) {
           case TypeCode.Boolean:
-            cmd.src._value=new NiL.JS.Core.BaseTypes.Boolean((bool)cmd.o);
+            cmd.src._value=new JST.Boolean((bool)cmd.o);
             break;
           case TypeCode.Byte:
           case TypeCode.SByte:
           case TypeCode.Int16:
           case TypeCode.Int32:
           case TypeCode.UInt16:
-            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt32(cmd.o));
+            cmd.src._value=new JST.Number(Convert.ToInt32(cmd.o));
             break;
           case TypeCode.Int64:
           case TypeCode.UInt32:
           case TypeCode.UInt64:
-            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt64(cmd.o));
+            cmd.src._value=new JST.Number(Convert.ToInt64(cmd.o));
             break;
           case TypeCode.Single:
           case TypeCode.Double:
           case TypeCode.Decimal:
-            cmd.src._value=new NiL.JS.Core.BaseTypes.Number(Convert.ToDouble(cmd.o));
+            cmd.src._value=new JST.Number(Convert.ToDouble(cmd.o));
             break;
           case TypeCode.DateTime: {
               var dt = ((DateTime)cmd.o);
-              var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month-1, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
+              var jdt=new JST.Date(dt);
               cmd.src._value=new JSObject(jdt);  //.getTime() .valueOf()
             }
             break;
@@ -411,7 +411,7 @@ namespace X13.PLC {
             cmd.src._value=JSObject.Undefined;
             break;
           case TypeCode.String:
-            cmd.src._value=new NiL.JS.Core.BaseTypes.String((string)cmd.o);
+            cmd.src._value=new JST.String((string)cmd.o);
             break;
           case TypeCode.Object:
           default: {

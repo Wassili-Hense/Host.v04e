@@ -1,4 +1,5 @@
 ﻿using NiL.JS.Core;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -245,10 +246,13 @@ namespace X13.PLC {
         lock(this) {
           if(_json==null) {
             var t=_value.ValueType;
+            JST.Date jd;
             if(t==JSObjectType.NotExists || t==JSObjectType.NotExistsInObject || t==JSObjectType.Undefined) {
               _json="null";
+            } else if(t==JSObjectType.Object && (jd=_value.Value as JST.Date)!=null){
+              _json=jd.toISOString().ToString();
             } else {
-              _json=NiL.JS.Core.Modules.JSON.stringify(_value, null, null);
+              _json=JST.JSON.stringify(_value, null, null);
             }
           }
         }

@@ -1,5 +1,4 @@
-﻿using NiL.JS.Core.Modules;
-using JST = NiL.JS.Core.BaseTypes;
+﻿using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,7 +83,7 @@ namespace X13.Server {
     }
     public void RcvMsg(string json) {
       try {
-        var msg=JSON.parse(json) as JST.Array;
+        var msg=JST.JSON.parse(json) as JST.Array;
         if(msg!=null && msg.length.As<int>()>0 && msg["0"].IsNumber) {
           int cmd=msg["0"].As<int>();
           int len=msg.length.As<int>();

@@ -1,5 +1,5 @@
 ﻿using NiL.JS.Core;
-using NiL.JS.Core.Modules;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -64,28 +64,28 @@ namespace X13.model {
         JSObject val=null;
         switch(Type.GetTypeCode(value==null?null:value.GetType())) {
         case TypeCode.Boolean:
-          val=new NiL.JS.Core.BaseTypes.Boolean((bool)value);
+          val=new JST.Boolean((bool)value);
           break;
         case TypeCode.Byte:
         case TypeCode.SByte:
         case TypeCode.Int16:
         case TypeCode.Int32:
         case TypeCode.UInt16:
-          val=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt32(value));
+          val=new JST.Number(Convert.ToInt32(value));
           break;
         case TypeCode.Int64:
         case TypeCode.UInt32:
         case TypeCode.UInt64:
-          val=new NiL.JS.Core.BaseTypes.Number(Convert.ToInt64(value));
+          val=new JST.Number(Convert.ToInt64(value));
           break;
         case TypeCode.Single:
         case TypeCode.Double:
         case TypeCode.Decimal:
-          val=new NiL.JS.Core.BaseTypes.Number(Convert.ToDouble(value));
+          val=new JST.Number(Convert.ToDouble(value));
           break;
         case TypeCode.DateTime: {
             var dt = ((DateTime)value);
-            var jdt=new NiL.JS.Core.BaseTypes.Date(new NiL.JS.Core.Arguments { dt.Year, dt.Month-1, dt.Day, dt.Hour, dt.Minute, dt.Second, dt.Millisecond });
+            var jdt=new JST.Date(dt);
             val=new JSObject(jdt);
           }
           break;
@@ -93,7 +93,7 @@ namespace X13.model {
           val=JSObject.Undefined;
           break;
         case TypeCode.String:
-          val=new NiL.JS.Core.BaseTypes.String((string)value);
+          val=new JST.String((string)value);
           break;
         case TypeCode.Object:
         default: {
@@ -190,7 +190,7 @@ namespace X13.model {
         } else {
           this.Name=nname;
           if(_parent._value.Value==null || _parent._value==JSObject.Undefined) {
-            _parent._value=JSON.parse("{ }");
+            _parent._value=JST.JSON.parse("{ }");
           }
           _value=_parent._value.DefineMember(Name);
           int i, j;

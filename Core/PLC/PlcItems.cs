@@ -2,6 +2,7 @@
 using NiL.JS.Core;
 using NiL.JS.Core.Modules;
 using NiL.JS.Core.TypeProxing;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -469,9 +470,9 @@ namespace X13.PLC {
   }
 
   internal class PiDeclarer : CustomType {
-    private static NiL.JS.Core.BaseTypes.Function ctor;
+    private static JST.Function ctor;
     static PiDeclarer() {
-      ctor= new Script("function Construct(){ return Function.apply(null, arguments); }").Context.GetVariable("Construct").Value as NiL.JS.Core.BaseTypes.Function;
+      ctor= new Script("function Construct(){ return Function.apply(null, arguments); }").Context.GetVariable("Construct").Value as JST.Function;
     }
 
     public static PiDeclarer Get(string name) {
@@ -492,15 +493,15 @@ namespace X13.PLC {
       JSObject tmp;
       tmp=jso["init"];
       if(tmp.ValueType==JSObjectType.String) {
-        rez._initFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+        rez._initFunc = ctor.Invoke(new Arguments { tmp }) as JST.Function;
       }
       tmp=jso["calc"];
       if(tmp.ValueType==JSObjectType.String) {
-        rez._calcFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+        rez._calcFunc = ctor.Invoke(new Arguments { tmp }) as JST.Function;
       }
       tmp=jso["deinit"];
       if(tmp.ValueType==JSObjectType.String) {
-        rez._deinitFunc = ctor.Invoke(new Arguments { tmp }) as NiL.JS.Core.BaseTypes.Function;
+        rez._deinitFunc = ctor.Invoke(new Arguments { tmp }) as JST.Function;
       }
       rez.pins=new SortedList<string, PinDeclarer>();
       tmp=jso["pins"];
@@ -522,9 +523,9 @@ namespace X13.PLC {
       return rez;
     }
 
-    private NiL.JS.Core.BaseTypes.Function _initFunc;
-    private NiL.JS.Core.BaseTypes.Function _calcFunc;
-    private NiL.JS.Core.BaseTypes.Function _deinitFunc;
+    private JST.Function _initFunc;
+    private JST.Function _calcFunc;
+    private JST.Function _deinitFunc;
 
     public string info;
     public string image;
@@ -577,7 +578,7 @@ namespace X13.PLC {
       }
       return r;
     }
-    private string GetFunctionBody(NiL.JS.Core.BaseTypes.Function f) {
+    private string GetFunctionBody(JST.Function f) {
       string full=f.ToString();
       int bi=full.IndexOf('{');
       int ei=full.LastIndexOf('}');

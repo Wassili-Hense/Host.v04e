@@ -1,6 +1,5 @@
 ﻿using NiL.JS.Core;
-using NiL.JS.Core.Modules;
-using JST = NiL.JS.Core.BaseTypes;
+using JST = NiL.JS.BaseLibrary;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -55,7 +54,7 @@ namespace X13.model {
 
     private void RcvMsg(string json) {
       try {
-        var jo=JSON.parse(json) as JST.Array;
+        var jo=JST.JSON.parse(json) as JST.Array;
         if(jo!=null && jo.length.As<int>()>0 && jo["0"].IsNumber) {
           _ipq.Enqueue(jo);
         }
