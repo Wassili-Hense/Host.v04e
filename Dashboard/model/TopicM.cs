@@ -40,7 +40,7 @@ namespace X13.model {
             }
           }
           break;
-        case 40:
+        case 296:
           if(len==4){
             string opath=msg["1"].As<string>();
             string npath=msg["2"].As<string>();
@@ -109,6 +109,10 @@ namespace X13.model {
           this.RaisePropertyChanged("Children");
         }
         if((_subscribed&2)==0) {
+          foreach(var t in _children.Where(z=>(z._subscribed&1)==1) ) {
+            t._subscribed&=~1;
+            WsClient.instance.Unsubscribe(t.Path, 1);
+          }
           WsClient.instance.Subscribe(this.Path, 2);    // path/+
           _subscribed|=2;
         }
@@ -162,7 +166,7 @@ namespace X13.model {
                 throw new ArgumentException("path ("+Path+") is not valid");
               }
               next=new TopicM(cur, pe[i]);
-              X13.lib.Log.Debug("{0}.Get({1}) - new({2})", this.Path, p, next.Path);
+              //X13.lib.Log.Debug("{0}.Get({1}) - new({2})", this.Path, p, next.Path);
               int idx;
               for(idx=0; idx<cur._children.Count; idx++) {
                 if(!cur._children[idx].EditName && string.Compare(cur._children[idx].Name, pe[i])>0) {
@@ -193,7 +197,7 @@ namespace X13.model {
           this.Remove(false);
         } else {      // create
           Name=nname;
-          WsClient.instance.Create(this.Path, "undefined");
+          WsClient.instance.Publish(this.Path, "null");
           this.Remove(false);
         }
       } else {  // rename

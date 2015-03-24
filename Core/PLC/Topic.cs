@@ -230,11 +230,18 @@ namespace X13.PLC {
       var c=Perform.Create(this, val, prim);
       PLC.instance.DoCmd(c, true);
     }
-    public void SetJson(string json, Topic prim=null) {
+    public void SetJson(JSObject jso, Topic prim=null) {
       var c=Perform.Create(this, Perform.Art.setJson, prim);
-      c.o=json;
+      c.o=jso;
       PLC.instance.DoCmd(c, false);
     }
+
+    public void SetJson(string json, Topic prim=null) {
+      var c=Perform.Create(this, Perform.Art.setJson, prim);
+      c.o=JST.JSON.parse(json);
+      PLC.instance.DoCmd(c, false);
+    }
+
     internal void SetIJson(string json, Topic prim=null) {
       var c=Perform.Create(this, Perform.Art.setJson, prim);
       c.o=json;

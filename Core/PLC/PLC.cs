@@ -365,10 +365,9 @@ namespace X13.PLC {
       if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.setJson || (cmd.art == Perform.Art.set && !object.Equals(cmd.src._value, cmd.o))) {
         cmd.old_o = cmd.src._value;
         if(cmd.art == Perform.Art.setJson) {
-          string json=(string)cmd.o;
-          var jso= JST.JSON.parse(json);
+          var jso=cmd.o as JSObject;
           JSObject ty;
-          if(jso.ValueType==JSObjectType.Object && json!="null" && (ty=jso.GetMember("$type")).IsDefinded) {
+          if(jso.ValueType==JSObjectType.Object && jso.Value!=null && (ty=jso.GetMember("$type")).IsDefinded) {
             Func<JSObject, Topic, Topic, JSObject> f;
             if(_knownTypes.TryGetValue(ty.As<string>(), out f) && f!=null) {
               cmd.src._value=f(jso, cmd.src, cmd.prim);

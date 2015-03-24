@@ -34,10 +34,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NiL.JS, Version=1.2.662.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\bin\NiL.JS.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Web" />
@@ -127,6 +123,10 @@
     <AppDesigner Include="Properties\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\NiL.JS_M\NiL.JS\NiL.JS.csproj">
+      <Project>{f703d739-bcfa-4515-a963-c95651cb1ec4}</Project>
+      <Name>NiL.JS</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Core\Core.csproj">
       <Project>{32e4bc3a-9d2f-4f5a-ad16-39c80a418b5f}</Project>
       <Name>Core</Name>

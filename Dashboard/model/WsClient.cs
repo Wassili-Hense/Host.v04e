@@ -28,19 +28,67 @@ namespace X13.model {
     }
     public string Info { get { return "local"; } }
 
-    public void Subscribe(string path, int mask) {
-      _conn.Subscribe(path, mask);
+    public void Publish(string path, string payload, string options=null) {
+      if(string.IsNullOrEmpty(payload)) {
+        _conn.RcvMsg("[16,"+JsEnc(path) + "]");
+      } else {
+        _conn.RcvMsg("[16,"+JsEnc(path) + "," + payload +"]");
+      }
     }
-    public void Unsubscribe(string path, int mask) {
-      _conn.Unsubscribe(path, mask);
+    public void Copy(string path, string parentPath, string nname) {
+      _conn.RcvMsg("[274,"+JsEnc(path) + "," + JsEnc(parentPath) + "," + JsEnc(nname) +"]");
+    }
+    public void Move(string path, string parentPath, string nname) {
+      _conn.RcvMsg("[276,"+JsEnc(path) + "," + JsEnc(parentPath) + "," + JsEnc(nname) +"]");
     }
 
-    public void Create(string path, string payload) {
-      _conn.Create(path, payload, string.Empty);
+    public void Subscribe(string path, int mask) {
+      StringBuilder sb=new StringBuilder();
+      sb.Append("[32,");
+      sb.Append(JsEnc(path));
+      sb.Append(",{");
+      if((mask&1)==1) {
+        sb.Append("\"once\":true");
+      }
+      if((mask&2)==2) {
+        if((mask&1)!=0) {
+          sb.Append(",");
+        }
+        sb.Append("\"children\":true");
+      }
+      if((mask&4)==4) {
+        if((mask&3)!=0) {
+          sb.Append(",");
+        }
+        sb.Append("\"all\":true");
+      }
+      sb.Append("}]");
+      _conn.RcvMsg(sb.ToString());
     }
-    public void Publish(string path, string payload, string options=null) {
-      _conn.Publish(path, payload, options);
+    public void Unsubscribe(string path, int mask) {
+      StringBuilder sb=new StringBuilder();
+      sb.Append("[34,");
+      sb.Append(JsEnc(path));
+      sb.Append(",{");
+      if((mask&1)==1) {
+        sb.Append("\"once\":true");
+      }
+      if((mask&2)==2) {
+        if((mask&1)!=0) {
+          sb.Append(",");
+        }
+        sb.Append("\"children\":true");
+      }
+      if((mask&4)==4) {
+        if((mask&3)!=0) {
+          sb.Append(",");
+        }
+        sb.Append("\"all\":true");
+      }
+      sb.Append("}]");
+      _conn.RcvMsg(sb.ToString());
     }
+
     public bool Poll(out JST.Array msg) {
       return _ipq.TryDequeue(out msg);
     }
@@ -58,18 +106,10 @@ namespace X13.model {
         if(jo!=null && jo.length.As<int>()>0 && jo["0"].IsNumber) {
           _ipq.Enqueue(jo);
         }
-        X13.lib.Log.Debug("Rcv: {0}", json);
       }
       catch(Exception ex) {
-        X13.lib.Log.Debug("RcvMsg({0}) - {1}", json, ex.Message);
+        X13.lib.Log.Warning("RcvMsg({0}) - {1}", json, ex.Message);
       }
-    }
-
-    internal void Move(string path, string parentPath, string nname) {
-      _conn.Move(path, parentPath, nname);
-    }
-    internal void Copy(string path, string parentPath, string nname) {
-      _conn.RcvMsg("[18,"+JsEnc(path) + "," + JsEnc(parentPath) + "," + JsEnc(nname) +"]");
     }
   }
 }
