@@ -219,35 +219,7 @@
                     </Style>
                   </TextBox.Style>
                 </TextBox>
-                <Image Grid.Column="2" Stretch="None" MouseUp="Image_MouseUp">
-                  <Image.Style>
-                    <Style TargetType="{x:Type Image}">
-                      <Setter Property="Source" Value="/Dashboard;component/Images/ty_obj.png" />
-                      <Style.Triggers>
-                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Bool}">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_bool.png"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Int}">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_i64.png"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Double}">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_f02.png"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.DateTime}">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_dt.png"/>
-                        </DataTrigger>
-
-                        <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.String}">
-                          <Setter Property="Source" Value="/Dashboard;component/Images/ty_str.png"/>
-                        </DataTrigger>
-
-                      </Style.Triggers>
-                    </Style>
-                  </Image.Style>
-                </Image>
+                <Image Grid.Column="2" Stretch="None" Source="{Binding Icon}" MouseUp="Image_MouseUp" />
               </Grid>
             </DataTemplate>
           </GridViewColumn.CellTemplate>

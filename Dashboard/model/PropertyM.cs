@@ -5,9 +5,24 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using MIm=System.Windows.Media.Imaging;
 
 namespace X13.model {
   internal class PropertyM : ViewModelBase {
+    protected static SortedList<string, MIm.BitmapImage> _icons;
+
+    static PropertyM() {
+      _icons=new SortedList<string, MIm.BitmapImage>();
+      _icons[ViewTypeEn.Bool]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_bool.png", UriKind.Relative));
+      _icons[ViewTypeEn.Int]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_i64.png", UriKind.Relative));
+      _icons[ViewTypeEn.Double]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_f02.png", UriKind.Relative));
+      _icons[ViewTypeEn.DateTime]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_dt.png", UriKind.Relative));
+      _icons[ViewTypeEn.String]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_str.png", UriKind.Relative));
+      _icons[ViewTypeEn.PiAlias]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_ref.png", UriKind.Relative));
+      _icons[ViewTypeEn.PiLink]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_wire.png", UriKind.Relative));
+      _icons[ViewTypeEn.Object]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_obj.png", UriKind.Relative));
+    }
+
     protected PropertyM _parent;
     protected JSObject _value;
     private string _oType;
@@ -56,7 +71,41 @@ namespace X13.model {
           return _value.As<DateTime>();
         case ViewTypeEn.String:
           return _value.As<string>();
+        case ViewTypeEn.PiAlias: {
+            JSObject alias;
+            if(_value.Value!=null && (alias=_value["alias"]).IsDefinded) {
+              return alias.As<string>();
+            }
+          }
+          goto default;
+        case ViewTypeEn.PiLink: {
+          JSObject i, o;
+            if(_value.Value!=null && (i=_value["i"]).IsDefinded && (o=_value["o"]).IsDefinded) {
+              return i.As<string>()+" > "+o.As<string>();
+            }
+          }
+          goto default;
+        case ViewTypeEn.PiBlock: {
+            JSObject func;
+            if(_value.Value!=null && (func=_value["func"]).IsDefinded) {
+              return func.As<string>();
+            }
+          }
+          goto default;
         default:
+          if(_value==null || _value==JSObject.Undefined) {
+            return "undefined";
+          }
+          if(_value.ValueType==JSObjectType.Object) {
+            JSObject otype;
+            if(_value.Value==null) {
+              return "null";
+            } else if(_value.Value!=null && (otype=_value["$type"]).IsDefinded) {
+              return otype.As<string>();
+            } else {
+              return "{ }";
+            }
+          }
           return _value.Value;
         }
       }
@@ -139,6 +188,28 @@ namespace X13.model {
           case JSObjectType.Date:
             _viewType=ViewTypeEn.DateTime;
             break;
+          case JSObjectType.Object: {
+              JSObject otype;
+              if(_value.Value!=null && (otype=_value["$type"]).IsDefinded) {
+                switch(otype.As<string>()) {
+                case "PiAlias":
+                  _viewType=ViewTypeEn.PiAlias;
+                  break;
+                case "PiLink":
+                  _viewType=ViewTypeEn.PiLink;
+                  break;
+                case "PiBlock":
+                  _viewType=ViewTypeEn.PiBlock;
+                  break;
+                default:
+                  _viewType=ViewTypeEn.Object;
+                  break;
+                }
+              } else {
+                _viewType=ViewTypeEn.Object;
+              }
+            }
+            break;
           default:
             _viewType=ViewTypeEn.Object;
             break;
@@ -151,6 +222,22 @@ namespace X13.model {
           _viewType=value;
           this.RaisePropertyChanged("ViewType");
         }
+      }
+    }
+    public MIm.BitmapImage Icon {
+      get {
+        MIm.BitmapImage ic;
+        string vt=ViewType;
+        if(vt==ViewTypeEn.PiBlock) {
+          JSObject func;
+          if(_value.Value!=null && (func=_value["func"]).IsDefinded) {
+            vt=func.As<string>();
+          }
+        }
+        if(!_icons.TryGetValue(vt, out ic)) {
+          ic=_icons[ViewTypeEn.Object];
+        }
+        return ic;
       }
     }
 
@@ -295,12 +382,15 @@ namespace X13.model {
     }
   }
   internal static class ViewTypeEn {
-    private static string[] _arr=new string[] { Bool, Int, Double, DateTime, String, Object };
+    private static string[] _arr=new string[] { Bool, Int, Double, DateTime, String, PiLink, PiAlias, PiBlock, Object };
     public const string Bool="bool";
     public const string Int="int";
     public const string Double="double";
     public const string DateTime="DateTime";
     public const string String="string";
+    public const string PiLink="PLC.Link";
+    public const string PiAlias="PLC.Alias";
+    public const string PiBlock="PLC.Block";
     public const string Object="object";
 
     public static bool Check(string vt) {

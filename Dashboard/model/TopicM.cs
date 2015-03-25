@@ -159,7 +159,15 @@ namespace X13.model {
             } else {
               next=cur._children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);
             }
+            if((cur._subscribed&2)==0) {
+              foreach(var t in _children.Where(z => (z._subscribed&1)==1)) {
+                t._subscribed&=~1;
+                WsClient.instance.Unsubscribe(t.Path, 1);
+              }
+              WsClient.instance.Subscribe(this.Path, 2, true);    // path/+  , wait SubAck
+              _subscribed|=2;
 
+            }
             chExist=next!=null;
             if(!chExist) {
               if(pe[i]=="+" || pe[i]=="#") {

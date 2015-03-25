@@ -196,7 +196,7 @@ namespace X13.UI {
     }
 
     private void FillContectMenu(FrameworkElement s, PropertyM v, bool header) {
-      MenuItem mi1, mi2;
+      MenuItem mi1, mi2, mi3;
       bool isTopic=v is TopicM;
       bool sep=false;
 
@@ -242,6 +242,17 @@ namespace X13.UI {
         mi2=new MenuItem() { Header="String", Tag="#"+ViewTypeEn.String };
         mi2.Click+=ContextMenuClick;
         mi1.Items.Add(mi2);
+
+        mi2=new MenuItem() { Header="Objects" };
+        mi1.Items.Add(mi2);
+
+        mi3=new MenuItem() { Header="Wire", Tag="#"+ViewTypeEn.PiLink };
+        mi3.Click+=ContextMenuClick;
+        mi2.Items.Add(mi3);
+
+        mi3=new MenuItem() { Header="Link", Tag="#"+ViewTypeEn.PiAlias };
+        mi3.Click+=ContextMenuClick;
+        mi2.Items.Add(mi3);
 
         mi2=new MenuItem() { Header="Object", Tag="#"+ViewTypeEn.Object };
         mi2.Click+=ContextMenuClick;

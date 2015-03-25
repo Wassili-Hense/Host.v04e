@@ -42,7 +42,7 @@ namespace X13.model {
       _conn.RcvMsg("[276,"+JsEnc(path) + "," + JsEnc(parentPath) + "," + JsEnc(nname) +"]");
     }
 
-    public void Subscribe(string path, int mask) {
+    public void Subscribe(string path, int mask, bool waitAck=false) {
       StringBuilder sb=new StringBuilder();
       sb.Append("[32,");
       sb.Append(JsEnc(path));
