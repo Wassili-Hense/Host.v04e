@@ -158,9 +158,11 @@ namespace UnitTests.Core {
 
       t0.changed+=dl;
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(1, cmds1.Count);
+      Assert.AreEqual(2, cmds1.Count);
       Assert.AreEqual(t0, cmds1[0].src);
       Assert.AreEqual(Perform.Art.subscribe, cmds1[0].art);
+      Assert.AreEqual(t0, cmds1[1].src);
+      Assert.AreEqual(Perform.Art.subAck, cmds1[1].art);
       cmds1.Clear();
       var t1=t0.Get("ch_a");
       t1.Set("Hi");
@@ -170,7 +172,11 @@ namespace UnitTests.Core {
       t0.changed-=dl;
       t0.Set(2.98);
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(0, cmds1.Count);
+      Assert.AreEqual(2, cmds1.Count);
+      Assert.AreEqual(t0, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.unsubscribe, cmds1[0].art);
+      Assert.AreEqual(t0, cmds1[1].src);
+      Assert.AreEqual(Perform.Art.unsubAck, cmds1[1].art);
     }
     [TestMethod]
     public void T11() {
@@ -183,9 +189,11 @@ namespace UnitTests.Core {
       X13.PLC.PLC.instance.Tick();
       t0.children.changed+=dl;
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(1, cmds1.Count);
-      Assert.AreEqual(Perform.Art.subscribe, cmds1[0].art);
+      Assert.AreEqual(2, cmds1.Count);
       Assert.AreEqual(t1, cmds1[0].src);
+      Assert.AreEqual(Perform.Art.subscribe, cmds1[0].art);
+      Assert.AreEqual(t0, cmds1[1].src);
+      Assert.AreEqual(Perform.Art.subAck, cmds1[1].art);
       cmds1.Clear();
 
       t1.Set("Hi");
@@ -217,13 +225,15 @@ namespace UnitTests.Core {
       X13.PLC.PLC.instance.Tick();
       t0.all.changed+=dl;
       X13.PLC.PLC.instance.Tick();
-      Assert.AreEqual(3, cmds1.Count);
+      Assert.AreEqual(4, cmds1.Count);
       Assert.AreEqual(Perform.Art.subscribe, cmds1[0].art);
       Assert.AreEqual(t0, cmds1[0].src);
       Assert.AreEqual(Perform.Art.subscribe, cmds1[1].art);
       Assert.AreEqual(t1, cmds1[1].src);
       Assert.AreEqual(Perform.Art.subscribe, cmds1[2].art);
       Assert.AreEqual(t1_a, cmds1[2].src);
+      Assert.AreEqual(t0, cmds1[3].src);
+      Assert.AreEqual(Perform.Art.subAck, cmds1[3].art);
       cmds1.Clear();
 
       t1.Set("Hi");
@@ -331,7 +341,7 @@ namespace UnitTests.Core {
       var b=p0.Get("B");
       p0.children.changed+=dl;
       PLC.instance.Tick();
-      Assert.AreEqual(4, cmds1.Count);
+      Assert.AreEqual(5, cmds1.Count);
       Assert.AreEqual(3, p0.children.Count());
     }
     [TestMethod]

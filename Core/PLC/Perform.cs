@@ -69,7 +69,9 @@ namespace X13.PLC {
       setJson=13,
       changed=14,
       move=16,
-      remove=17
+      remove=17,
+      subAck=20,
+      unsubAck=24,
     }
 
     public bool EqualsEx(Perform other) {

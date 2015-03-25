@@ -241,21 +241,25 @@ namespace X13.PLC {
       _busyFlag = 1;
     }
     private void TickStep1(Perform c) {
-      Action<Topic, Perform> func;
+      SubRec sr;
       Topic t;
       switch(c.art) {
       case Perform.Art.create:
         if((t = c.src.parent) != null) {
           //t._children[c.src.name]=c.src;
           if(t._subRecords != null) {
-            foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskChildren)) {
-              c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
+            lock(t._subRecords) {
+              foreach(var st in t._subRecords.Where(z => z.path==t.path && (z.flags & SubRec.SubMask.Chldren)==SubRec.SubMask.Chldren)) {
+                c.src.Subscribe(st);
+              }
             }
           }
           while(t != null) {
             if(t._subRecords != null) {
-              foreach(var sr in t._subRecords.Where(z => z.ma != null && z.ma.Length == 1 && z.ma[0] == Topic.Bill.maskAll)) {
-                c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = new string[0], f = sr.f });
+              lock(t._subRecords) {
+                foreach(var st in t._subRecords.Where(z => (z.flags & SubRec.SubMask.All)==SubRec.SubMask.All)) {
+                  c.src.Subscribe(st);
+                }
               }
             }
             t = t.parent;
@@ -265,41 +269,33 @@ namespace X13.PLC {
         break;
       case Perform.Art.subscribe:
       case Perform.Art.unsubscribe:
-        if((func = c.o as Action<Topic, Perform>) != null) {
-          if(c.i == 0) {
-            if(c.art == Perform.Art.subscribe) {
-              c.src.Subscribe(new Topic.SubRec() { mask = c.src.path, ma = Topic.Bill.curArr, f = func });
-            } else {
-              c.src.Unsubscribe(c.src.path, func);
-            }
-            goto case Perform.Art.set;
-          } else {
-            Topic.SubRec sr;
-            Topic.Bill b;
-            if(c.i == 1) {
-              sr = new Topic.SubRec() { mask = c.prim.path + "/+", ma = Topic.Bill.curArr, f = func };
-              if(c.art == Perform.Art.subscribe) {
-                c.src.Subscribe(new Topic.SubRec() { mask = sr.mask, ma = Topic.Bill.childrenArr, f = func });
-              } else {
-                c.src.Unsubscribe(sr.mask, func);
-              }
-              b = c.src.children;
-            } else {
-              sr = new Topic.SubRec() { mask = c.prim.path + "/#", ma = Topic.Bill.allArr, f = func };
-              b = c.src.all;
-            }
+        if((sr=c.o as SubRec) != null) {
+          Topic.Bill b=null;
+          Perform np;
+          if((sr.flags & SubRec.SubMask.Once)==SubRec.SubMask.Once) {
+            EnquePerf(c);
+          }
+          if((sr.flags & SubRec.SubMask.Chldren)==SubRec.SubMask.Chldren) {
+            b = c.src.children;
+          }
+          if((sr.flags & SubRec.SubMask.All)==SubRec.SubMask.All) {
+            b = c.src.all;
+          }
+          if(b!=null) {
             foreach(Topic tmp in b) {
               if(c.art == Perform.Art.subscribe) {
                 tmp.Subscribe(sr);
+                np=Perform.Create(tmp, c.art, c.src);
+                np.o=c.o;
+                EnquePerf(np);
               } else {
-                c.src.Unsubscribe(sr.mask, func);
+                tmp._subRecords.Remove(sr);
               }
-              var np=Perform.Create(tmp, c.art, c.src);
-              np.o=c.o;
-              np.i=c.i;
-              EnquePerf(np);
             }
           }
+          np=Perform.Create(c.src, c.art==Perform.Art.subscribe?Perform.Art.subAck:Perform.Art.unsubAck, c.src);
+          np.o=c.o;
+          EnquePerf(np);
         }
         break;
 
@@ -317,9 +313,9 @@ namespace X13.PLC {
           t._value = c.src._value;
           c.src._value = JSObject.Undefined;
           if(c.src._subRecords != null) {
-            foreach(var sr in c.src._subRecords) {
-              if(sr.mask.StartsWith(oPath)) {
-                t.Subscribe(new Topic.SubRec() { mask = sr.mask.Replace(oPath, nPath), ma = sr.ma, f = sr.f });
+            foreach(var st in c.src._subRecords) {
+              if(st.path.StartsWith(oPath)) {
+                t.Subscribe(new SubRec() { path = st.path.Replace(oPath, nPath), flags=st.flags, f = st.f });
               }
             }
           }
@@ -329,16 +325,15 @@ namespace X13.PLC {
           foreach(var t1 in t.all) {
             if(t1._subRecords != null) {
               for(int i = t1._subRecords.Count - 1; i >= 0; i--) {
-                if(t1._subRecords[i].mask.StartsWith(oPath)) {
-                  t1._subRecords[i] = new Topic.SubRec() { mask = t1._subRecords[i].mask.Replace(oPath, nPath), ma = t1._subRecords[i].ma, f = t1._subRecords[i].f };
-                } else if(!t1._subRecords[i].mask.StartsWith(nPath)) {
+                if(t1._subRecords[i].path.StartsWith(oPath)) {
+                  t1._subRecords[i].path=t1._subRecords[i].path.Replace(oPath, nPath);
+                } else if(!t1._subRecords[i].path.StartsWith(nPath)) {
                   t1._subRecords.RemoveAt(i);
                 }
               }
             }
             t1.path = t1.parent == Topic.root ? string.Concat("/", t1.name) : string.Concat(t1.parent.path, "/", t1.name);
             DoCmd(Perform.Create(t1, Perform.Art.create, c.prim), false);
-            //EnquePerf(Perform.Create(t1, Perform.Art.create, c.prim));
           }
 
           int idx = EnquePerf(c)-1;
@@ -361,6 +356,7 @@ namespace X13.PLC {
         break;
       }
     }
+
     private void TickStep2(Perform cmd) {
       if(cmd.art == Perform.Art.remove || cmd.art == Perform.Art.setJson || (cmd.art == Perform.Art.set && !object.Equals(cmd.src._value, cmd.o))) {
         cmd.old_o = cmd.src._value;
@@ -461,7 +457,7 @@ namespace X13.PLC {
     private int EnquePerf(Perform cmd) {
       int i;
       for(i=0; i<_prOp.Count; i++) {
-        if(_prOp[i].EqualsGr(cmd)) { 
+        if(_prOp[i].EqualsGr(cmd)) {
           if(_prOp[i].EqualsEx(cmd)) {
             return i;
           }
@@ -556,7 +552,7 @@ namespace X13.PLC {
             var pl=bl._pins.Where(z => bl._decl.pins[z.Key].ip && z.Value.layer > 0);
             if(pl.Any()) {
               bl.layer=pl.Max(z => z.Value.layer) + 1;
-            } else{
+            } else {
               bl.layer=1;     // block with 1 input in loop
             }
           }

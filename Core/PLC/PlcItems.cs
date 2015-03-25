@@ -29,7 +29,7 @@ namespace X13.PLC {
       owner = src;
       _cont=new List<PlcItem>();
       layer=0;
-      owner.Subscribe(owner_changed, true);
+      owner.Subscribe(owner_changed, SubRec.SubMask.Once, true);
     }
 
     private void owner_changed(Topic src, Perform p) {
@@ -140,7 +140,7 @@ namespace X13.PLC {
         _owner=value;
         if(_owner!=null) {
           origin.AddCont(this);
-          _owner.Subscribe(_owner_changed, true);
+          _owner.Subscribe(_owner_changed, SubRec.SubMask.Once, true);
         }
       }
     }
@@ -451,7 +451,7 @@ namespace X13.PLC {
             foreach(var t in _owner.children) {
               AddPin(t);
             }
-            _owner.children.Subsribe(children_changed, true);
+            _owner.Subscribe(children_changed, SubRec.SubMask.Chldren, true);
           }
         }
       }

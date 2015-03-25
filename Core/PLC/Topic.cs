@@ -256,7 +256,7 @@ namespace X13.PLC {
             JST.Date jd;
             if(t==JSObjectType.NotExists || t==JSObjectType.NotExistsInObject || t==JSObjectType.Undefined) {
               _json="null";
-            } else if(t==JSObjectType.Object && (jd=_value.Value as JST.Date)!=null){
+            } else if(t==JSObjectType.Object && (jd=_value.Value as JST.Date)!=null) {
               _json=jd.toISOString().ToString();
             } else {
               _json=JST.JSON.stringify(_value, null, null);
@@ -269,58 +269,87 @@ namespace X13.PLC {
 
     public event Action<Topic, Perform> changed {
       add {
-        Subscribe(value, false);
+        Subscribe(value, SubRec.SubMask.Once, false);
       }
       remove {
-        var c=Perform.Create(this, Perform.Art.unsubscribe, this);
-        c.o=value;
-        c.i=0;
-        PLC.instance.DoCmd(c, false);
+        Unsubscribe(value, SubRec.SubMask.Once, false);
       }
     }
 
     internal void Publish(Perform cmd) {
-      Action<Topic, Perform> func;
-      if(cmd.art==Perform.Art.subscribe && (func=cmd.o as Action<Topic, Perform>)!=null) {
+      SubRec sb;
+      if((cmd.art==Perform.Art.subscribe || cmd.art==Perform.Art.unsubscribe || cmd.art==Perform.Art.subAck || cmd.art==Perform.Art.unsubAck) 
+        && (sb=cmd.o as SubRec)!=null && sb.f!=null) {
         try {
-          func(this, cmd);
+          sb.f(this, cmd);
         }
         catch(Exception ex) {
-          Log.Warning("{0}.{1}({2}, {4}) - {3}", func.Method.DeclaringType.Name, func.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
+          Log.Warning("{0}.{1}({2}, {4}) - {3}", sb.f.Method.DeclaringType.Name, sb.f.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
         }
       } else {
         if(_subRecords!=null) {
           for(int i=0; i<_subRecords.Count; i++) {
-            if((func=_subRecords[i].f)!=null && (_subRecords[i].ma.Length==0 || _subRecords[i].ma[0]==Bill.maskAll)) {
+            sb=_subRecords[i];
+            if(sb.f!=null && ((sb.flags & SubRec.SubMask.OnceOrAll)!=SubRec.SubMask.None 
+              || ((sb.flags&SubRec.SubMask.Chldren)==SubRec.SubMask.Chldren && this.parent!=null && sb.path==this.parent.path))) {
               try {
-                func(this, cmd);
+                sb.f(this, cmd);
               }
               catch(Exception ex) {
-                Log.Warning("{0}.{1}({2}, {4}) - {3}", func.Method.DeclaringType.Name, func.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
+                Log.Warning("{0}.{1}({2}, {4}) - {3}", sb.f.Method.DeclaringType.Name, sb.f.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
               }
             }
           }
         }
       }
     }
+
     internal void Subscribe(SubRec sr) {
-      if(this._subRecords==null) {
-        this._subRecords=new List<SubRec>();
+      if(_subRecords==null) {
+        _subRecords=new List<SubRec>();
       }
-      if(!this._subRecords.Exists(z => z.f==sr.f && z.mask==sr.mask)) {
-        this._subRecords.Add(sr);
+      lock(_subRecords) {
+        if(!_subRecords.Any(z => z.path==sr.path && z.flags==sr.flags && z.f==sr.f)) {
+          _subRecords.Add(sr);
+        }
       }
     }
-    internal void Subscribe(Action<Topic, Perform> func, bool intern) {
+
+    internal SubRec Subscribe(Action<Topic, Perform> func, SubRec.SubMask mask, bool intern) {
+      SubRec sb;
+      if(_subRecords==null) {
+        _subRecords=new List<SubRec>();
+      }
+      lock(_subRecords) {
+        sb=_subRecords.FirstOrDefault(z => z.f==func && z.path==this.path && z.flags==mask);
+        if(sb==null) {
+          sb=new SubRec() { path=this.path, flags=mask, f=func };
+          _subRecords.Add(sb);
+        }
+      }
       var c=Perform.Create(this, Perform.Art.subscribe, this);
-      c.o=func;
-      c.i=0;
+      c.o=sb;
       PLC.instance.DoCmd(c, intern);
+      return sb;
     }
-    internal void Unsubscribe(string mask, Action<Topic, Perform> f) {
-      if(this._subRecords!=null) {
-        this._subRecords.RemoveAll(z => z.f==f && z.mask==mask);
+    internal SubRec Unsubscribe(Action<Topic, Perform> func, SubRec.SubMask mask, bool intern) {
+      SubRec sb;
+      if(_subRecords==null) {
+        sb=null;
+      } else {
+        lock(_subRecords) {
+          sb=_subRecords.FirstOrDefault(z => z.f==func && z.path==this.path && z.flags==mask);
+          if(sb!=null) {
+            _subRecords.Remove(sb);
+            var c=Perform.Create(this, Perform.Art.unsubscribe, this);
+            c.o=sb;
+            PLC.instance.DoCmd(c, intern);
+          } else {
+            sb=null;
+          }
+        }
       }
+      return sb;
     }
 
     #region nested types
@@ -345,7 +374,7 @@ namespace X13.PLC {
       public IEnumerator<Topic> GetEnumerator() {
         if(!_deep) {
           if(_home._children!=null) {
-            foreach(var t in _home._children.OrderBy(z=>z.Key)) {
+            foreach(var t in _home._children.OrderBy(z => z.Key)) {
               yield return t.Value;
             }
           }
@@ -358,7 +387,7 @@ namespace X13.PLC {
             cur=hist.Pop();
             yield return cur;
             if(cur._children!=null) {
-              foreach(var t in cur._children.OrderByDescending(z=>z.Key)) {
+              foreach(var t in cur._children.OrderByDescending(z => z.Key)) {
                 hist.Push(t.Value);
               }
             }
@@ -367,32 +396,31 @@ namespace X13.PLC {
       }
       public event Action<Topic, Perform> changed {
         add {
-          Subsribe(value, false);
+          _home.Subscribe(value, _deep?SubRec.SubMask.All:SubRec.SubMask.Chldren, false);
         }
         remove {
-          Perform c=Perform.Create(_home, Perform.Art.unsubscribe, _home);
-          c.o=value;
-          c.i=_deep?2:1;
-          PLC.instance.DoCmd(c, false);
+          _home.Unsubscribe(value, _deep?SubRec.SubMask.All:SubRec.SubMask.Chldren, false);
         }
-      }
-      internal void Subsribe(Action<Topic, Perform> f, bool intern) {
-        Perform c=Perform.Create(_home, Perform.Art.subscribe, _home);
-        c.o=f;
-        c.i=_deep?2:1;
-        PLC.instance.DoCmd(c, intern);
       }
       System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() {
         return GetEnumerator();
       }
     }
 
-    internal struct SubRec {
-      public string mask;
-      public string[] ma;
-      public Action<Topic, Perform> f;
-    }
     #endregion nested types
+  }
+  internal class SubRec {
+    public string path;
+    public SubMask flags;
+    public Action<Topic, Perform> f;
+    [Flags]
+    public enum SubMask {
+      None=0,
+      Once=1,
+      Chldren=2,
+      All=4,
+      OnceOrAll=5,
+    }
   }
 
   public interface ITenant {

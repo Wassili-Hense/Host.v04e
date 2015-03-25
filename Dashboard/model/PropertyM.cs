@@ -81,7 +81,7 @@ namespace X13.model {
         case ViewTypeEn.PiLink: {
           JSObject i, o;
             if(_value.Value!=null && (i=_value["i"]).IsDefinded && (o=_value["o"]).IsDefinded) {
-              return i.As<string>()+" > "+o.As<string>();
+              return i.As<string>()+" ► "+o.As<string>();
             }
           }
           goto default;
