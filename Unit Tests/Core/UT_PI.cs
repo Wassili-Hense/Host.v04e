@@ -151,7 +151,7 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T09() {
       var cmds1=new List<Perform>();
-      var dl=new Action<Topic, Perform>((s, p) => { cmds1.Add(p); });
+      var dl=new Action<SubRec, Perform>((s, p) => { cmds1.Add(p); });
 
       Topic t0=root.Get("child1");
       X13.PLC.PLC.instance.Tick();
@@ -181,7 +181,7 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T11() {
       var cmds1=new List<Perform>();
-      var dl=new Action<Topic, Perform>((s, p) => { cmds1.Add(p); });
+      var dl=new Action<SubRec, Perform>((s, p) => { cmds1.Add(p); });
 
       Topic t0=root.Get("child2");
       var t1=t0.Get("ch_a");
@@ -217,7 +217,7 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T12() {
       var cmds1=new List<Perform>();
-      var dl=new Action<Topic, Perform>((s, p) => { cmds1.Add(p); });
+      var dl=new Action<SubRec, Perform>((s, p) => { cmds1.Add(p); });
 
       Topic t0=root.Get("child3");
       var t1=t0.Get("ch_a");
@@ -280,7 +280,7 @@ namespace UnitTests.Core {
     [TestMethod]
     public void T14() {
       var cmds1=new List<Perform>();
-      var dl=new Action<Topic, Perform>((s, p) => { cmds1.Add(p); });
+      var dl=new Action<SubRec, Perform>((s, p) => { cmds1.Add(p); });
 
       var b3=root.Get("B3");
       b3.all.changed+=dl;
@@ -336,7 +336,7 @@ namespace UnitTests.Core {
     public void T17() {
       var cmds1=new List<Perform>();
       var p0=Topic.root.Get("/T17");
-      var dl=new Action<Topic, Perform>((s, p) => { p0.Get("C"); cmds1.Add(p); });
+      var dl=new Action<SubRec, Perform>((s, p) => { p0.Get("C"); cmds1.Add(p); });
       var a=p0.Get("A");
       var b=p0.Get("B");
       p0.children.changed+=dl;
@@ -593,9 +593,6 @@ namespace UnitTests.Core {
       p.Get("w001").value=new PiLink(a01_q_t, a01_t.Get("A"));
       PLC.instance.Tick();
       Assert.IsNotNull(a01._decl, "func/NOT not found");
-      Assert.AreEqual(true, a01_q_t.As<bool>());
-
-      PLC.instance.Tick();
       Assert.AreEqual(false, a01_q_t.As<bool>());
 
       PLC.instance.Tick();
@@ -606,6 +603,9 @@ namespace UnitTests.Core {
 
       PLC.instance.Tick();
       Assert.AreEqual(true, a01_q_t.As<bool>());
+
+      PLC.instance.Tick();
+      Assert.AreEqual(false, a01_q_t.As<bool>());
     }
     /// <summary>Block(MyFunc), modify MyFunc</summary>
     [TestMethod]

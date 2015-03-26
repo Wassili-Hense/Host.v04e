@@ -11,7 +11,7 @@ using System.Text;
 
 namespace X13.PLC {
   internal interface PlcItem : ITenant {
-    void changed(Topic src, Perform p);
+    void changed(SubRec sb, Perform p);
     int layer { get; }
   }
 
@@ -32,9 +32,9 @@ namespace X13.PLC {
       owner.Subscribe(owner_changed, SubRec.SubMask.Once, true);
     }
 
-    private void owner_changed(Topic src, Perform p) {
+    private void owner_changed(SubRec sb, Perform p) {
       for(int i=_cont.Count-1; i>=0; i--) {
-        _cont[i].changed(src, p);
+        _cont[i].changed(sb, p);
       }
       if(p.art==Perform.Art.remove) {
         PLC.instance.DelVar(this);
@@ -145,12 +145,12 @@ namespace X13.PLC {
       }
     }
     [Hidden]
-    public void changed(Topic src, Perform p) {
-      if(src==origin.owner && p.art==Perform.Art.remove && _owner!=null) {
+    public void changed(SubRec sb, Perform p) {
+      if(p.src==origin.owner && p.art==Perform.Art.remove && _owner!=null) {
         _owner.Remove(p.prim);
       }
     }
-    private void _owner_changed(Topic snd, Perform p) {
+    private void _owner_changed(SubRec sb, Perform p) {
       if(p.art==Perform.Art.remove) {
         for(int i=links.Count-1; i>=0; i--) {
           links[i].owner.Remove(p.prim);
@@ -266,21 +266,21 @@ namespace X13.PLC {
       }
     }
     [Hidden]
-    public void changed(Topic src, Perform p) {
+    public void changed(SubRec sr, Perform p) {
       if(_owner == null) {
         return;
       }
       if(p.art == Perform.Art.remove) {
         _owner.Remove(p.prim);
       } else if(p.art == Perform.Art.changed || p.art==Perform.Art.subscribe) {
-        if(src.vType == typeof(PiAlias)) {
-          PiAlias al = src.As<PiAlias>();
-          if(src == _ipTopic) {
+        if(p.src.vType == typeof(PiAlias)) {
+          PiAlias al = p.src.As<PiAlias>();
+          if(p.src == _ipTopic) {
             input.DelCont(this);
             input = al.origin;
             al.AddLink(this);
             input.AddCont(this);
-          } else if(src == _opTopic) {
+          } else if(p.src == _opTopic) {
             if(al.origin.ip) {
               throw new ArgumentException(string.Format("{0} already hat source", _opTopic.path));
             }
@@ -291,12 +291,12 @@ namespace X13.PLC {
           } else {
             return;
           }
-        } else if(src != input.owner) {
+        } else if(p.src != input.owner) {
           return;
         }
         if(input.layer!=0 || input.owner._value.IsDefinded) {
           output.owner._value=input.owner._value;
-          if(src==input.owner) {
+          if(p.src==input.owner) {
             var c=Perform.Create(output.owner, Perform.Art.changed, this.owner);
             c.o=input.owner._value;
             PLC.instance.DoCmd(c, true);
@@ -345,18 +345,18 @@ namespace X13.PLC {
       calcPath = new PiBlock[] { this };
     }
 
-    private void children_changed(Topic src, Perform p) {
+    private void children_changed(SubRec sb, Perform p) {
       if(_decl==null) {
         return;
       }
       if(p.art == Perform.Art.remove) {
         PiVar v;
-        if(_pins.TryGetValue(src.name, out v)) {
-          _pins.Remove(src.name);
+        if(_pins.TryGetValue(p.src.name, out v)) {
+          _pins.Remove(p.src.name);
           v.DelCont(this);
         }
       } else if(p.art != Perform.Art.unsubscribe) {
-        PinDeclarer pd = AddPin(src);
+        PinDeclarer pd = AddPin(p.src);
         if(pd!=null && ((p.art == Perform.Art.changed && pd.ip) || p.art == Perform.Art.subscribe)) {
           _decl.Calc(this);
         }
@@ -457,7 +457,7 @@ namespace X13.PLC {
       }
     }
     [Hidden]
-    public void changed(Topic src, Perform p) {
+    public void changed(SubRec sb, Perform p) {
 
     }
     public int layer {

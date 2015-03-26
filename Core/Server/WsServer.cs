@@ -47,23 +47,56 @@ namespace X13.Server {
     }
 
     private Action<string> _rcvEvent;
+    private Dictionary<SubRec, long> _subscriptions;
     private Topic _owner;
 
     internal WsConnection(Action<string> re) {
       _rcvEvent=re;
       _owner=Topic.root.Get("/clients").Get(string.Format("{0}_{1}", Environment.MachineName, (Environment.TickCount&0xFFFF).ToString("X4")));
+      _subscriptions=new Dictionary<SubRec, long>();
     }
 
-    private void ChangedEvent(Topic s, Perform p) {
+    private void ChangedEvent(SubRec sb, Perform p) {
       string msg;
       if((p.art==Perform.Art.changed && p.prim!=_owner) || p.art==Perform.Art.subscribe || (p.art==Perform.Art.create && p.prim==_owner)) {
-          msg="[36,"+ JsEnc(s.path) + ","+ s.ToJson() +"]";
+        msg="[36,"+ JsEnc(p.src.path) + ","+ p.src.ToJson() +"]";
+        X13.lib.Log.Debug("S {0} Publish({1}, {2})", _owner==null?"Unk":_owner.name, p.src.path, p.src.ToJson());
       } else if(p.art==Perform.Art.remove) {
-        msg="[36,"+ JsEnc(s.path)+"]";
+        msg="[36,"+ JsEnc(p.src.path) +"]";
+        X13.lib.Log.Debug("S {0} Publish({1}) - Delete", _owner==null?"Unk":_owner.name, p.src.path);
       } else if(p.art==Perform.Art.move) {
         Topic nt=p.o as Topic;
         if(nt!=null) {
-          msg="[296,"+JsEnc(s.path) + "," + JsEnc(nt.parent.path) + "," + JsEnc(nt.name) +"]";
+          msg="[296,"+JsEnc(p.src.path) + "," + JsEnc(nt.parent.path) + "," + JsEnc(nt.name) +"]";
+          X13.lib.Log.Debug("S {0} Move({1}, {2})", _owner==null?"Unk":_owner.name, p.src.path, nt.path);
+        } else {
+          return;
+        }
+      } else if(p.art==Perform.Art.subAck){
+        long sid;
+        lock(_subscriptions){
+          if(!_subscriptions.TryGetValue(sb, out sid)){
+            sid=0;
+          }
+        }
+        if(sid>0) {
+          msg="[33,"+ sid.ToString()+"]";
+          X13.lib.Log.Debug("S {0} SubAck({1})", _owner==null?"Unk":_owner.name, sb);
+        } else {
+          return;
+        }
+      } else if(p.art==Perform.Art.unsubAck){
+        long sid;
+        lock(_subscriptions) {
+          if(!_subscriptions.TryGetValue(sb, out sid)) {
+            sid=0;
+          } else {
+            _subscriptions.Remove(sb);
+          }
+        }
+        if(sid>0) {
+          msg="[35,"+ sid.ToString()+"]";
+          X13.lib.Log.Debug("S {0} UnsubAck({1})", _owner==null?"Unk":_owner.name, sb);
         } else {
           return;
         }
@@ -71,9 +104,9 @@ namespace X13.Server {
         return;
       }
       _rcvEvent(msg);
-      X13.lib.Log.Debug("S {0} {1}", _owner==null?"Unk":_owner.name, msg);
     }
     public void RcvMsg(string json) {
+      string info=null;
       try {
         var msg=JST.JSON.parse(json) as JST.Array;
         if(msg!=null && msg.length.As<int>()>0 && msg["0"].IsNumber) {
@@ -84,16 +117,19 @@ namespace X13.Server {
             if(len==3) { // Publish  [16, "path", payload]
               var tmp=_owner.Get(msg["1"].As<string>(), true, _owner);
               tmp.SetJson(msg["2"], _owner);
+              info="publish";
             } else if(len==2) { // Remove  [16, "path"]
               var tmp=_owner.Get(msg["1"].As<string>(), false, _owner);
               if(tmp!=null) {
                 tmp.Remove(_owner);
+                info="remove";
               }
             }
             break;
           case 274:    // Copy  [274, "oldPath", "newParentPath", "neName"]
             if(len==4) {
               Copy(msg["1"].As<string>(), msg["2"].As<string>(), msg["3"].As<string>());
+              info="copy";
             }
             break;
           case 276:  // Move   [276, "oldPath", "newParentPath", "neName"]
@@ -101,42 +137,51 @@ namespace X13.Server {
               Topic o, p;
               if((o=_owner.Get(msg["1"].As<string>(), false, _owner))!=null && (p=_owner.Get(msg["2"].As<string>(), false, _owner))!=null) {
                 o.Move(p, msg["3"].As<string>(), _owner);
+                info="move";
               }
             }
             break;
-          case 32:  //Subscribe   [32, "path", {["once":true,]["children":true,]["all":true]}]
-            if(len==3 && msg["2"].ValueType==JSObjectType.Object && msg["2"].Value!=null) {
-              var tmp=_owner.Get(msg["1"].As<string>(), true, _owner);
-              if(msg["2"]["once"].As<bool>()) {
-                tmp.changed+=ChangedEvent;
+          case 32:  //Subscribe   [32, sid, "mask"]
+            if(len==3 && msg["1"].IsNumber) {
+              SubRec sb;
+              SubRec.SubMask msk=SubRec.SubMask.Once;
+              long sId=msg[1].As<long>();
+              string path=msg["2"].As<string>();
+              if(path.EndsWith("/+")) {
+                path=path.Substring(0, path.Length-1);
+                msk=SubRec.SubMask.Chldren;
+              } else if(path.EndsWith("/#")) {
+                path=path.Substring(0, path.Length-1);
+                msk=SubRec.SubMask.All;
               }
-              if(msg["2"]["children"].As<bool>()) {
-                tmp.children.changed+=ChangedEvent;
-              } else if(msg["2"]["all"].As<bool>()) {
-                tmp.all.changed+=ChangedEvent;
+              var tmp=_owner.Get(path, true, _owner);
+              sb=tmp.Subscribe(ChangedEvent, msk, false);
+              lock(_subscriptions) {
+                _subscriptions[sb]=sId;
               }
+              info="subscribe";
             }
             break;
-          case 34:  //Unubscribe   [34, "path", {["once":true,]["children":true,]["all":true]}]
-            if(len==3 && msg["2"].ValueType==JSObjectType.Object && msg["2"].Value!=null) {
-              var tmp=_owner.Get(msg["1"].As<string>(), false, _owner);
-              if(tmp!=null) {
-                if(msg["2"]["once"].As<bool>()) {
-                  tmp.changed-=ChangedEvent;
-                }
-                if(msg["2"]["children"].As<bool>()) {
-                  tmp.children.changed-=ChangedEvent;
-                }
-                if(msg["2"]["all"].As<bool>()) {
-                  tmp.all.changed-=ChangedEvent;
+          case 34:  //Unubscribe   [34, sid]
+            if(len==2 && msg["1"].IsNumber) {
+              long sId=msg[1].As<long>();
+              SubRec sb;
+              lock(_subscriptions) {
+                var kv=_subscriptions.FirstOrDefault(z => z.Value==sId);
+                sb=kv.Key;
+              }
+              if(sb!=null) {
+                var tmp=_owner.Get(sb.path, false, _owner);
+                if(tmp!=null) {
+                  tmp.Unsubscribe(ChangedEvent, sb.flags, false);
                 }
               }
+              info="unsubscribe";
             }
             break;
-
           }
         }
-        X13.lib.Log.Debug("R {0} {1}", _owner==null?"Unk":_owner.name, json);
+        X13.lib.Log.Debug("R {0} {1}", _owner==null?"Unk":_owner.name, info==null?json:("["+info+json.Substring(json.IndexOf(','))));
       }
       catch(Exception ex) {
         X13.lib.Log.Debug("R {0} {1} - {2}", _owner==null?"Unk":_owner.name, json, ex.Message);
@@ -159,6 +204,9 @@ namespace X13.Server {
         }
         n.SetJson(t.ToJson(), _owner);
       }
+    }
+    public override string ToString() {
+      return _owner==null?base.ToString():_owner.name;
     }
   }
 }

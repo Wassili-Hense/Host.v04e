@@ -46,30 +46,31 @@ namespace X13.PLC {
       if(other==null) {
         return -1;
       }
+      int p1=((int)this.art)>>2;
+      int p2=(int)(other.art)>>2;
+      if(p1!=p2) {
+        return p1.CompareTo(p2);
+      }
       if(this.layer!=other.layer) {
         return this.layer>other.layer?1:-1;
       }
       if(this.src==other.src) {
-        int p1=((int)this.art)>>2;
-        int p2=(int)(other.art)>>2;
-        if(p1!=p2) {
-          return p1.CompareTo(p2);
+          return 0;
         }
-      }
-      return -1;  // для различных топиков с однаковым layer - this<other ( сохраняется порядок поступления)
+      return -1;  // для различных топиков с однаковым layer & art - this<other ( сохраняется порядок поступления)
     }
     public override string ToString() {
       return string.Concat(src.path, "[", art.ToString(), ", ", layer.ToString() , "]=", o==null?"null":o.ToString());
     }
     public enum Art {
-      create=1,
+      move=1,
+      create=2,
       subscribe=4,
       unsubscribe=8,
       set=12,
       setJson=13,
       changed=14,
-      move=16,
-      remove=17,
+      remove=16,
       subAck=20,
       unsubAck=24,
     }

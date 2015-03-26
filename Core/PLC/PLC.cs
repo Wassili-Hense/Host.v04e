@@ -335,8 +335,8 @@ namespace X13.PLC {
             t1.path = t1.parent == Topic.root ? string.Concat("/", t1.name) : string.Concat(t1.parent.path, "/", t1.name);
             DoCmd(Perform.Create(t1, Perform.Art.create, c.prim), false);
           }
-
-          int idx = EnquePerf(c)-1;
+          EnquePerf(c);
+          int idx = _prOp.Count-1;
           while(idx >= 0) {
             Perform c1 = _prOp[idx--];
             if(c1.src == c.src && (c1.art == Perform.Art.set || c1.art==Perform.Art.setJson)) {

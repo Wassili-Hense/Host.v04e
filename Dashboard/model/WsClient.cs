@@ -21,10 +21,14 @@ namespace X13.model {
 
     private WsConnection _conn;
     private ConcurrentQueue<JST.Array> _ipq;
+    private long _subIdx;
+    private Dictionary<long, string> _subscriptions;
 
     private WsClient() {
       _ipq=new ConcurrentQueue<JST.Array>();
       _conn=WsServer.instance.Connect(RcvMsg);
+      _subIdx=1;
+      _subscriptions=new Dictionary<long, string>();
     }
     public string Info { get { return "local"; } }
 
@@ -43,50 +47,57 @@ namespace X13.model {
     }
 
     public void Subscribe(string path, int mask, bool waitAck=false) {
-      StringBuilder sb=new StringBuilder();
-      sb.Append("[32,");
-      sb.Append(JsEnc(path));
-      sb.Append(",{");
-      if((mask&1)==1) {
-        sb.Append("\"once\":true");
-      }
-      if((mask&2)==2) {
-        if((mask&1)!=0) {
-          sb.Append(",");
+      long sid;
+      bool exist=false;
+      if((mask&6)!=0) {
+        if(path=="/") {
+          path=string.Empty;
         }
-        sb.Append("\"children\":true");
-      }
-      if((mask&4)==4) {
-        if((mask&3)!=0) {
-          sb.Append(",");
+        if((mask&2)==2) {
+          path+="/+";
+        } else {
+          path+="/#";
         }
-        sb.Append("\"all\":true");
       }
-      sb.Append("}]");
-      _conn.RcvMsg(sb.ToString());
+      lock(_subscriptions) {
+        var kv=_subscriptions.FirstOrDefault(z => z.Value==path);
+        if(kv.Key>0) {
+          sid=kv.Key;
+          exist=true;
+        } else {
+          sid=_subIdx++;
+          _subscriptions[sid]=path;
+        }
+      }
+      if(!exist) {
+        _conn.RcvMsg("[32,"+sid.ToString()+","+JsEnc(path)+"]");
+      }
+      if(waitAck) {
+        //TODO: WaitAck
+      }
     }
     public void Unsubscribe(string path, int mask) {
-      StringBuilder sb=new StringBuilder();
-      sb.Append("[34,");
-      sb.Append(JsEnc(path));
-      sb.Append(",{");
-      if((mask&1)==1) {
-        sb.Append("\"once\":true");
-      }
-      if((mask&2)==2) {
-        if((mask&1)!=0) {
-          sb.Append(",");
+      if((mask&6)!=0) {
+        if(path=="/") {
+          path=string.Empty;
         }
-        sb.Append("\"children\":true");
-      }
-      if((mask&4)==4) {
-        if((mask&3)!=0) {
-          sb.Append(",");
+        if((mask&2)==2) {
+          path+="/+";
+        } else {
+          path+="/#";
         }
-        sb.Append("\"all\":true");
       }
-      sb.Append("}]");
-      _conn.RcvMsg(sb.ToString());
+      long sid=0;
+      lock(_subscriptions) {
+        var kv=_subscriptions.FirstOrDefault(z=>z.Value==path);
+        if(kv.Value!=null) {
+          sid=kv.Key;
+        }
+      }
+      if(sid>0) {
+        _conn.RcvMsg("[34,"+sid.ToString()+"]");
+      }
+
     }
 
     public bool Poll(out JST.Array msg) {

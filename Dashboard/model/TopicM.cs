@@ -93,10 +93,6 @@ namespace X13.model {
 
     private TopicM(TopicM parent, string name)
       : base(parent, name) {
-      if(parent!=null && (parent._subscribed & 2)==0) {
-        WsClient.instance.Subscribe(this.Path, 1);
-        _subscribed|=1;
-      }
       if(parent==null) {
         IsRoot=true;
       }
@@ -109,10 +105,6 @@ namespace X13.model {
           this.RaisePropertyChanged("Children");
         }
         if((_subscribed&2)==0) {
-          foreach(var t in _children.Where(z=>(z._subscribed&1)==1) ) {
-            t._subscribed&=~1;
-            WsClient.instance.Unsubscribe(t.Path, 1);
-          }
           WsClient.instance.Subscribe(this.Path, 2);    // path/+
           _subscribed|=2;
         }
@@ -152,21 +144,16 @@ namespace X13.model {
         }
         bool chExist=next!=null;
         if(!chExist) {
+          if((cur._subscribed&2)==0) {
+            WsClient.instance.Subscribe(cur.Path, 2, true);    // path/+  , wait SubAck
+            cur._subscribed|=2;
+          }
           if(create) {
             if(cur._children==null) {
               cur._children=new ObservableCollection<TopicM>();
               next=null;
             } else {
               next=cur._children.Cast<TopicM>().FirstOrDefault(z => z.Name==pe[i]);
-            }
-            if((cur._subscribed&2)==0) {
-              foreach(var t in _children.Where(z => (z._subscribed&1)==1)) {
-                t._subscribed&=~1;
-                WsClient.instance.Unsubscribe(t.Path, 1);
-              }
-              WsClient.instance.Subscribe(this.Path, 2, true);    // path/+  , wait SubAck
-              _subscribed|=2;
-
             }
             chExist=next!=null;
             if(!chExist) {

@@ -267,7 +267,7 @@ namespace X13.PLC {
       return _json;
     }
 
-    public event Action<Topic, Perform> changed {
+    public event Action<SubRec, Perform> changed {
       add {
         Subscribe(value, SubRec.SubMask.Once, false);
       }
@@ -281,7 +281,7 @@ namespace X13.PLC {
       if((cmd.art==Perform.Art.subscribe || cmd.art==Perform.Art.unsubscribe || cmd.art==Perform.Art.subAck || cmd.art==Perform.Art.unsubAck) 
         && (sb=cmd.o as SubRec)!=null && sb.f!=null) {
         try {
-          sb.f(this, cmd);
+          sb.f(sb, cmd);
         }
         catch(Exception ex) {
           Log.Warning("{0}.{1}({2}, {4}) - {3}", sb.f.Method.DeclaringType.Name, sb.f.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
@@ -293,7 +293,7 @@ namespace X13.PLC {
             if(sb.f!=null && ((sb.flags & SubRec.SubMask.OnceOrAll)!=SubRec.SubMask.None 
               || ((sb.flags&SubRec.SubMask.Chldren)==SubRec.SubMask.Chldren && this.parent!=null && sb.path==this.parent.path))) {
               try {
-                sb.f(this, cmd);
+                sb.f(sb, cmd);
               }
               catch(Exception ex) {
                 Log.Warning("{0}.{1}({2}, {4}) - {3}", sb.f.Method.DeclaringType.Name, sb.f.Method.Name, this.path, ex.ToString(), cmd.art.ToString());
@@ -315,7 +315,7 @@ namespace X13.PLC {
       }
     }
 
-    internal SubRec Subscribe(Action<Topic, Perform> func, SubRec.SubMask mask, bool intern) {
+    internal SubRec Subscribe(Action<SubRec, Perform> func, SubRec.SubMask mask, bool intern) {
       SubRec sb;
       if(_subRecords==null) {
         _subRecords=new List<SubRec>();
@@ -332,7 +332,7 @@ namespace X13.PLC {
       PLC.instance.DoCmd(c, intern);
       return sb;
     }
-    internal SubRec Unsubscribe(Action<Topic, Perform> func, SubRec.SubMask mask, bool intern) {
+    internal SubRec Unsubscribe(Action<SubRec, Perform> func, SubRec.SubMask mask, bool intern) {
       SubRec sb;
       if(_subRecords==null) {
         sb=null;
@@ -394,7 +394,7 @@ namespace X13.PLC {
           } while(hist.Any());
         }
       }
-      public event Action<Topic, Perform> changed {
+      public event Action<SubRec, Perform> changed {
         add {
           _home.Subscribe(value, _deep?SubRec.SubMask.All:SubRec.SubMask.Chldren, false);
         }
@@ -409,10 +409,15 @@ namespace X13.PLC {
 
     #endregion nested types
   }
-  internal class SubRec {
-    public string path;
-    public SubMask flags;
-    public Action<Topic, Perform> f;
+  public class SubRec {
+    public string path { get; internal set; }
+    public SubMask flags { get; internal set; }
+    public Action<SubRec, Perform> f { get; internal set; }
+
+    public override string ToString() {
+      return string.Format("{0}{1} > {2}.{3}", path, (flags & (SubMask.Chldren | SubMask.All))!=SubMask.None? ((flags & SubMask.Chldren)!=SubMask.None?"/+":"/#"):string.Empty,
+        f.Target==null?f.Method.DeclaringType.Name:f.Target.ToString(), f.Method.Name);
+    }
     [Flags]
     public enum SubMask {
       None=0,
