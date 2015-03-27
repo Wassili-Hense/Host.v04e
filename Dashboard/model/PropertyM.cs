@@ -315,7 +315,7 @@ namespace X13.model {
         _parent.Publish();
       }
     }
-    protected void SetValue(JSObject value) {
+    protected internal void SetValue(JSObject value) {
       int i, j;
       bool propCh=false;
       PropertyM np=null;

@@ -1,41 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Windows.Threading;
 
 namespace X13.model {
   class ViewModelBase : INotifyPropertyChanged {
 
     protected virtual void RaisePropertyChanged(string propertyName) {
-      if(PropertyChanged != null)
-        PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
+      var eventHandler = PropertyChanged;
+      if(eventHandler != null) {
+        Delegate[] delegates = eventHandler.GetInvocationList();
+        // Walk thru invocation list
+        foreach(PropertyChangedEventHandler handler in delegates) {
+          var dispatcherObject = handler.Target as DispatcherObject;
+          // If the subscriber is a DispatcherObject and different thread
+          if(dispatcherObject != null && dispatcherObject.CheckAccess() == false)
+            // Invoke handler in the target dispatcher's thread
+            dispatcherObject.Dispatcher.Invoke(DispatcherPriority.DataBind, handler, this, new PropertyChangedEventArgs(propertyName));
+          else // Execute handler as is
+            handler(this, new PropertyChangedEventArgs(propertyName));
+        }
+      }
     }
-
 
     public event PropertyChangedEventHandler PropertyChanged;
-
-    /// <summary>
-    /// Tell bound controls (via WPF binding) to refresh their display.
-    /// 
-    /// Sample call: this.NotifyPropertyChanged(() => this.IsSelected);
-    /// where 'this' is derived from <seealso cref="BaseViewModel"/>
-    /// and IsSelected is a property.
-    /// </summary>
-    /// <typeparam Name="TProperty"></typeparam>
-    /// <param Name="property"></param>
-    public void NotifyPropertyChanged<TProperty>(Expression<Func<TProperty>> property) {
-      var lambda = (LambdaExpression)property;
-      MemberExpression memberExpression;
-
-      if(lambda.Body is UnaryExpression) {
-        var unaryExpression = (UnaryExpression)lambda.Body;
-        memberExpression = (MemberExpression)unaryExpression.Operand;
-      } else
-        memberExpression = (MemberExpression)lambda.Body;
-
-      this.RaisePropertyChanged(memberExpression.Member.Name);
-    }
   }
 }

@@ -89,9 +89,9 @@ namespace X13.UI {
       if((l=e.Data.GetData(DataFormats.UnicodeText.ToString(), false) as string)==null || !Uri.TryCreate(l, UriKind.Absolute, out srcU) || srcU.Scheme!="x13") {
         return;
       }
-      TopicM t=TopicM.root.Get(srcU.AbsolutePath , false);
-      TopicM p, n;
-      if(t==null || (p=this.DataContext as TopicM)==null) {
+      WsClient cl;
+      TopicM t, p, n;
+      if((cl=WsClient.Get(srcU.Host))==null || (t=cl.root.Get(srcU.AbsolutePath, false))==null || (p=this.DataContext as TopicM)==null) {
         return;
       }
       nname=t.Parent!=null?(t.Parent.Name+"_"+t.Name):t.Name;
@@ -160,16 +160,16 @@ namespace X13.UI {
             try {
               Uri r;
               Uri.TryCreate(Clipboard.GetText(TextDataFormat.UnicodeText), UriKind.Absolute, out r);
-              TopicM src;
-              TopicM par;
-              if(r.Scheme=="x13" && (src=TopicM.root.Get(r.AbsolutePath, false))!=null && (par=v as TopicM)!=null) {
+              WsClient cl;
+              TopicM src, par;
+              if(r.Scheme=="x13" && (cl=WsClient.Get(r.Host))!=null && (src=cl.root.Get(r.AbsolutePath, false))!=null && (par=v as TopicM)!=null) {
                 if(par.Path.StartsWith(src.Path)) {
                   X13.lib.Log.Warning("Can't paste {0} in {1}", src.Path, par.Path);
                 } else {
                   if(r.Query=="?copy") {
-                    WsClient.instance.Copy(src.Path, par.Path, src.Name);
+                    src._client.Copy(src.Path, par.Path, src.Name);
                   } else if(r.Query=="?move") {
-                    WsClient.instance.Move(src.Path, par.Path, src.Name);
+                    src._client.Move(src.Path, par.Path, src.Name);
                   }
                 }
               }

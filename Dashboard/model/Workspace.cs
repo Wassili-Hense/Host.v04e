@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace X13.model {
   class Workspace : ViewModelBase {
@@ -31,7 +32,6 @@ namespace X13.model {
     private Workspace() {
       _files = new ObservableCollection<TopicM>();
       _readonyFiles = null;
-      _files.Add(TopicM.root);
     }
 
 
@@ -71,7 +71,7 @@ namespace X13.model {
       }
       var fileViewModel = _files.FirstOrDefault(fm => fm.ContentId == p);
       if(fileViewModel != null) {
-        this.ActiveDocument = fileViewModel; // File is already open so shiw it
+        this.ActiveDocument = fileViewModel; // File is already open so show it
 
         return fileViewModel;
       }
@@ -79,13 +79,20 @@ namespace X13.model {
       fileViewModel = _files.FirstOrDefault(fm => fm.ContentId == p);
       if(fileViewModel != null)
         return fileViewModel;
+      var cl=WsClient.Get("local");
       if(p.StartsWith("LO:")) {
-        var r=TopicM.root.Get(p.Substring(3));
+        var r=cl.root.Get(p.Substring(3), false, false);
+        if(r==null) {
+          return null;
+        }
         r.View=Projection.LO;
         _files.Add(r);
         return r;
       } else if(p.StartsWith("IN:")) {
-        var r=TopicM.root.Get(p.Substring(3));
+        var r=cl.root.Get(p.Substring(3), false, true);
+        if(r==null) {
+          return null;
+        }
         r.View=Projection.IN;
         _files.Add(r);
         return r;

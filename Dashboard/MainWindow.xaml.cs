@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -69,22 +70,28 @@ namespace X13.UI {
             layoutS=xlay.OuterXml;
           }
         }
-        //if(!string.IsNullOrWhiteSpace(_connectionUrl)) {
-        //  _client=new WAMP.WampClient(_connectionUrl, WAMP.WmRoleFlags.publisher | WAMP.WmRoleFlags.pattern_based_subscription | WAMP.WmRoleFlags.subscriber);
-        //  _client.Open();
-        //}
         if(layoutS!=null) {
           var layoutSerializer = new Xceed.Wpf.AvalonDock.Layout.Serialization.XmlLayoutSerializer(dockManager);
-          layoutSerializer.LayoutSerializationCallback += (s, e1) => {
-            if(!string.IsNullOrWhiteSpace(e1.Model.ContentId)) {
-              e1.Content = Workspace.This.Open(e1.Model.ContentId);
-            }
-          };
+          layoutSerializer.LayoutSerializationCallback+=layoutSerializer_LayoutSerializationCallback;
           layoutSerializer.Deserialize(new System.IO.StringReader(layoutS));
         }
       }
       catch(Exception ex) {
         Log.Error("Load config - {0}", ex.Message);
+      }
+      if(!Workspace.This.Files.Any()) {
+        Workspace.This.AddFile(WsClient.Get("local").root);
+      }
+    }
+
+    private void layoutSerializer_LayoutSerializationCallback(object s, Xceed.Wpf.AvalonDock.Layout.Serialization.LayoutSerializationCallbackEventArgs e1) {
+      if(!string.IsNullOrWhiteSpace(e1.Model.ContentId)) {
+        var t=Workspace.This.Open(e1.Model.ContentId);
+        if(t!=null) {
+          e1.Content = t;
+        } else {
+          e1.Cancel=true;
+        }
       }
     }
 
