@@ -6,6 +6,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Specialized;
+using System.Windows.Threading;
 
 namespace X13.model {
   internal class TopicM : PropertyM, IDisposable {
@@ -76,70 +78,12 @@ namespace X13.model {
       }
       string[] pe=p.Split(_delmiter, StringSplitOptions.RemoveEmptyEntries);
       for(int i=0; i<pe.Length; i++, cur=next) {
-
-        if(cur._children==null) {
-          next=null;
-          chExist=false;
-        } else {
-          next=cur._children.FirstOrDefault(z => z.Name==pe[i]);
-          chExist=next!=null;
-        }
-
-        if(!chExist && (!create || wait) && (cur._subscribed&2)==0) {
+        if((wait || !create) && (cur._subscribed&2)==0) {
           var t=_client.Subscribe(cur==_client.root?"/+":cur.Path+"/+");
           if(t!=null && wait) {
             t.Wait();
-            if(cur._children!=null) {
-              next=cur._children.FirstOrDefault(z => z.Name==pe[i]);
-              chExist=next!=null;
-            }
           }
         }
-
-        if(!chExist) {
-          if(create) {
-            if(cur._children==null) {
-              cur._children=new ObservableTopics();
-              next=null;
-            } else {
-              next=cur._children.FirstOrDefault(z => z.Name==pe[i]);
-            }
-            chExist=next!=null;
-            if(!chExist) {
-              if(pe[i]=="+" || pe[i]=="#") {
-                throw new ArgumentException("path ("+Path+") is not valid");
-              }
-              next=new TopicM(cur, pe[i]);
-              //X13.lib.Log.Debug("{0}.Get({1}) - new({2})", this.Path, p, next.Path);
-              int idx;
-              for(idx=0; idx<cur._children.Count; idx++) {
-                if(!cur._children[idx].EditName && string.Compare(cur._children[idx].Name, pe[i])>0) {
-                  break;
-                }
-              }
-              cur._children.Insert(idx, next);
-            }
-          } else {
-            return null;
-          }
-        }
-      }
-      return cur;
-    }
-    public async Task<TopicM> GetAsync(string p, bool create=true) {
-      TopicM cur;
-      TopicM next=null;
-      bool chExist;
-      if(!string.IsNullOrEmpty(p) && p.StartsWith("/")) {
-        cur=_client.root;
-      } else {
-        cur=this;
-      }
-      if(string.IsNullOrEmpty(p)) {
-        return cur;
-      }
-      string[] pe=p.Split(_delmiter, StringSplitOptions.RemoveEmptyEntries);
-      for(int i=0; i<pe.Length; i++, cur=next) {
 
         if(cur._children==null) {
           next=null;
@@ -149,40 +93,15 @@ namespace X13.model {
           chExist=next!=null;
         }
 
-        if(!chExist && (cur._subscribed&2)==0) {
-          var t=_client.Subscribe(cur==_client.root?"/+":cur.Path+"/+");
-          if(t!=null) {
-            await t;
-            if(cur._children!=null) {
-              next=cur._children.FirstOrDefault(z => z.Name==pe[i]);
-              chExist=next!=null;
-            }
-          }
-        }
-
         if(!chExist) {
           if(create) {
+            if(pe[i]=="+" || pe[i]=="#") {
+              throw new ArgumentException("path ("+Path+") is not valid");
+            } 
             if(cur._children==null) {
               cur._children=new ObservableTopics();
-              next=null;
-            } else {
-              next=cur._children.FirstOrDefault(z => z.Name==pe[i]);
             }
-            chExist=next!=null;
-            if(!chExist) {
-              if(pe[i]=="+" || pe[i]=="#") {
-                throw new ArgumentException("path ("+Path+") is not valid");
-              }
-              next=new TopicM(cur, pe[i]);
-              //X13.lib.Log.Debug("{0}.Get({1}) - new({2})", this.Path, p, next.Path);
-              int idx;
-              for(idx=0; idx<cur._children.Count; idx++) {
-                if(!cur._children[idx].EditName && string.Compare(cur._children[idx].Name, pe[i])>0) {
-                  break;
-                }
-              }
-              cur._children.Insert(idx, next);
-            }
+            next=cur._children.AddTopic(cur, pe[i]);
           } else {
             return null;
           }
@@ -190,22 +109,24 @@ namespace X13.model {
       }
       return cur;
     }
+    //public async Task<TopicM> GetAsync(string p, bool create=true) {
+    //}
     public void AddChild() {
       Children.Insert(0, new TopicM(this, string.Empty));
     }
     public void Move(string npath, string nname) {
       TopicM np=this.Parent;
-      if(string.IsNullOrEmpty(npath) || npath==np.Path) {
-        int j=-1-np.IndexOf(this.Name);
+      if(string.IsNullOrEmpty(npath) || npath==np.Path) {  // rename
+        int j=-1-np._children.IndexOf(this.Name);
         if(j<0) {
           X13.lib.Log.Warning("Move({0}, {1}, {2}) - source not found", this.Path, npath, nname);
           return;
         }
-        int i=np.IndexOf(nname);
-        if(i==j) {  // position is not changed
+        int i=np._children.IndexOf(nname);
+        if(j==(i>j?i-1:i)) {  // position is not changed
           // do nothing
         } else if(i>=0) {
-          np._children.Move(j, i);
+          np._children.Move(j, i>j?i-1:i);
         } else {    // name already exist
           i=-1-i;
           np._children[i].Remove(false);
@@ -215,10 +136,16 @@ namespace X13.model {
         this.Parent._children.Remove(this);
         np=_client.root.Get(npath, true);
         this._parent=np;
-        int i=np.IndexOf(nname);
+        int i;
+        if(np._children==null){
+          i=0;
+          np._children=new ObservableTopics();
+        } else {
+          i=np._children.IndexOf(nname);
+        }
         if(i>=0) {
           np._children.Insert(i, this);
-        } else {
+        } else {   // name already exist
           np._children[-1-i]=this;
         }
       }
@@ -275,7 +202,7 @@ namespace X13.model {
               _children[i].Remove(ext);
             }
           }
-          (_parent as TopicM)._children.Remove(this);
+          Parent._children.Remove(this);
           Workspace.This.CloseFile(this);
         }
       }
@@ -301,23 +228,59 @@ namespace X13.model {
       _client.Unsubscribe(this.Path, _subscribed); // path/+
     }
 
-    private int IndexOf(string name) {
-      int i, j;
-      if(_children==null) {
+    internal class ObservableTopics : ObservableCollection<TopicM> {
+      // Override the event so this class can access it
+      public override event NotifyCollectionChangedEventHandler CollectionChanged;
+      public TopicM AddTopic(TopicM parent, string name) {
+        TopicM next;
+        using(BlockReentrancy()) {
+          int idx=IndexOf(name);
+          if(idx<0) {
+            next=this[-1-idx];
+          } else {
+            next=new TopicM(parent, name);
+            this.Insert(idx, next);
+          }
+        }
+        return next;
+      }
+      public int IndexOf(string name) {
+        int i, j;
+        for(i=this.Count-1;i>=0;i--) {
+          if(this[i].EditName) {
+            continue;
+          }
+          j=string.Compare(this[i].Name, name);
+          if(j==0) {
+            return -1-i;
+          }
+          if(j<0) {
+            return i+1;
+          }
+        }
         return 0;
       }
-      for(i=_children.Count-1; i>=0; i--) {
-        j=string.Compare(_children[i].Name, name);
-        if(j==0) {
-          i=-1-i;
-          break;
-        }
-        if(j<0) {
-          break;
+      protected override void OnCollectionChanged(NotifyCollectionChangedEventArgs e) {
+        // Be nice - use BlockReentrancy like MSDN said
+        using(BlockReentrancy()) {
+          var eventHandler = CollectionChanged;
+          if(eventHandler != null) {
+            Delegate[] delegates = eventHandler.GetInvocationList();
+            // Walk thru invocation list
+            foreach(NotifyCollectionChangedEventHandler handler in delegates) {
+              var dispatcherObject = handler.Target as DispatcherObject;
+              // If the subscriber is a DispatcherObject and different thread
+              if(dispatcherObject != null && dispatcherObject.CheckAccess() == false)
+                // Invoke handler in the target dispatcher's thread
+                dispatcherObject.Dispatcher.Invoke(DispatcherPriority.DataBind, handler, this, e);
+              else // Execute handler as is
+                handler(this, e);
+            }
+          }
         }
       }
-      return i;
     }
+
   }
   public enum Projection {
     /// <summary>InspectorView</summary>
