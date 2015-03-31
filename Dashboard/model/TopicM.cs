@@ -54,7 +54,7 @@ namespace X13.model {
 
     public string Path { get { return _parent==null?"/":(_parent==_client.root?"/"+Name:(_parent as TopicM).Path+"/"+Name); } }
     public TopicM Parent { get { return _parent as TopicM; } }
-    public string ContentId { get { return View.ToString()+":"+Path; } }
+    public string ContentId { get { return GetUri("view="+View.ToString()); } }
     public Projection View { get; set; }
     public IEnumerable<TopicM> NameList { get { return _parent==null?(new TopicM[] { this }):(_parent as TopicM).NameList.Union(new TopicM[] { this }); } }
 

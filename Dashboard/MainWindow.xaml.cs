@@ -26,7 +26,7 @@ namespace X13.UI {
     private string _cfgPath;
 
     public MainWindow() {
-      _cfgPath=Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData)+"/X13/Dashboard.cfg";
+      _cfgPath=Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)+"/X13/Dashboard.cfg";
       InitializeComponent();
       this.DataContext = Workspace.This;
     }

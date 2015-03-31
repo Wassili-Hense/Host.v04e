@@ -79,25 +79,24 @@ namespace X13.model {
       fileViewModel = _files.FirstOrDefault(fm => fm.ContentId == p);
       if(fileViewModel != null)
         return fileViewModel;
-      var cl=WsClient.Get("local");
-      if(p.StartsWith("LO:")) {
-        var r=cl.root.Get(p.Substring(3), false, false);
-        if(r==null) {
-          return null;
-        }
-        r.View=Projection.LO;
-        _files.Add(r);
-        return r;
-      } else if(p.StartsWith("IN:")) {
-        var r=cl.root.Get(p.Substring(3), false, true);
-        if(r==null) {
-          return null;
-        }
-        r.View=Projection.IN;
-        _files.Add(r);
-        return r;
+      Uri u;
+      if(!Uri.TryCreate(p, UriKind.Absolute, out u)) {
+        return null;
       }
-      return null;
+      var cl=WsClient.Get(u.Host);
+      var r=cl.root.Get(u.AbsolutePath, false, true);
+      if(r==null) {
+        return null;
+      }
+      if(u.Query=="?view=IN") {
+        r.View=Projection.IN;
+      } else if(u.Query=="?view=LO") {
+        r.View=Projection.LO;
+      } else {
+        return null;
+      }
+      _files.Add(r);
+      return r;
     }
   }
 }
