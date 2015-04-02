@@ -69,6 +69,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="model\DeclarerM.cs" />
     <Compile Include="model\PropertyM.cs" />
     <Compile Include="model\TopicM.cs" />
     <Compile Include="model\ViewModelBase.cs" />

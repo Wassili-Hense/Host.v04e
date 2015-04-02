@@ -9,29 +9,19 @@ using MIm=System.Windows.Media.Imaging;
 
 namespace X13.model {
   internal class PropertyM : ViewModelBase {
-    protected static SortedList<string, MIm.BitmapImage> _icons;
 
-    static PropertyM() {
-      _icons=new SortedList<string, MIm.BitmapImage>();
-      _icons[ViewTypeEn.Bool]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_bool.png", UriKind.Relative));
-      _icons[ViewTypeEn.Int]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_i64.png", UriKind.Relative));
-      _icons[ViewTypeEn.Double]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_f02.png", UriKind.Relative));
-      _icons[ViewTypeEn.DateTime]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_dt.png", UriKind.Relative));
-      _icons[ViewTypeEn.String]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_str.png", UriKind.Relative));
-      _icons[ViewTypeEn.PiAlias]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_ref.png", UriKind.Relative));
-      _icons[ViewTypeEn.PiLink]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_wire.png", UriKind.Relative));
-      _icons[ViewTypeEn.Object]=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_obj.png", UriKind.Relative));
-    }
+    public readonly WsClient _client;
 
     protected PropertyM _parent;
     protected JSObject _value;
+    protected DeclarerM _declarer;
     private string _oType;
-    private string _viewType;
     private bool _isSelected;
 
-    protected PropertyM(PropertyM parent, string name) {
+    protected PropertyM(PropertyM parent, string name, WsClient cl) {
       this.Name=name;
       _parent=parent;
+      _client=cl;
       if(string.IsNullOrEmpty(Name)) {
         EditName=true;
       }
@@ -55,12 +45,72 @@ namespace X13.model {
         return _value==null?JSObjectType.Undefined:_value.ValueType;
       }
     }
+    public DeclarerM Declarer {
+      get {
+        if(_declarer==null) {
+          switch(_value==null?JSObjectType.Undefined:_value.ValueType) {
+          case JSObjectType.Bool:
+            _declarer=_client.GetDecl(ViewTypeEn.Bool);
+            break;
+          case JSObjectType.Int:
+            _declarer=_client.GetDecl(ViewTypeEn.Int);
+            break;
+          case JSObjectType.Double:
+            _declarer=_client.GetDecl(ViewTypeEn.Double);
+            break;
+          case JSObjectType.String:
+            _declarer=_client.GetDecl(ViewTypeEn.String);
+            break;
+          case JSObjectType.Date:
+            _declarer=_client.GetDecl(ViewTypeEn.DateTime);
+            break;
+          case JSObjectType.Object: {
+              JSObject otype;
+              if(_value.Value!=null && (otype=_value["$type"]).IsDefinded) {
+                switch(otype.As<string>()) {
+                case "PiAlias":
+                  _declarer=_client.GetDecl(ViewTypeEn.PiAlias);
+                  break;
+                case "PiLink":
+                  _declarer=_client.GetDecl(ViewTypeEn.PiLink);
+                  break;
+                case "PiBlock": {
+                    JSObject func;
+                    string funcName;
+                    if(_value.Value!=null && (func=_value["func"]).IsDefinded && (funcName=func.As<string>())!=null) {
+                      _declarer=_client.GetDecl("func/"+funcName);
+                      break;
+                    }
+                  }
+                  _declarer=_client.GetDecl(ViewTypeEn.Object);
+                  break;
+                default:
+                  _declarer=_client.GetDecl(ViewTypeEn.Object);
+                  break;
+                }
+              } else {
+                _declarer=_client.GetDecl(ViewTypeEn.Object);
+              }
+            }
+            break;
+          default:
+            _declarer=_client.GetDecl(ViewTypeEn.Object);
+            break;
+          }
+        }
+        return _declarer;
+      }
+      set {
+        _declarer=value;
+        this.RaisePropertyChanged("Declarer");
+      }
+    }
     public object Value {
       get {
         if(_value==null) {
           return null;
         }
-        switch(ViewType) {
+        switch(Declarer==null?null:Declarer.Name) {
         case ViewTypeEn.Bool:
           return _value.As<bool>();
         case ViewTypeEn.Int:
@@ -79,7 +129,7 @@ namespace X13.model {
           }
           goto default;
         case ViewTypeEn.PiLink: {
-          JSObject i, o;
+            JSObject i, o;
             if(_value.Value!=null && (i=_value["i"]).IsDefinded && (o=_value["o"]).IsDefinded) {
               return i.As<string>()+" ► "+o.As<string>();
             }
@@ -163,81 +213,10 @@ namespace X13.model {
           _parent._value[Name]=val;
         }
         Publish();
-        if(ViewType!=ViewTypeEn.Object && Properties!=null && Properties.Count>0) {
+        if(Declarer!=null && Declarer.View!=ViewTypeEn.Object && Properties!=null && Properties.Count>0) {
           Properties.Clear();
           this.RaisePropertyChanged("Properties");
         }
-      }
-    }
-    public string ViewType {
-      get {
-        if(string.IsNullOrEmpty(_viewType)) {
-          switch(_value==null?JSObjectType.Undefined:_value.ValueType) {
-          case JSObjectType.Bool:
-            _viewType=ViewTypeEn.Bool;
-            break;
-          case JSObjectType.Int:
-            _viewType=ViewTypeEn.Int;
-            break;
-          case JSObjectType.Double:
-            _viewType=ViewTypeEn.Double;
-            break;
-          case JSObjectType.String:
-            _viewType=ViewTypeEn.String;
-            break;
-          case JSObjectType.Date:
-            _viewType=ViewTypeEn.DateTime;
-            break;
-          case JSObjectType.Object: {
-              JSObject otype;
-              if(_value.Value!=null && (otype=_value["$type"]).IsDefinded) {
-                switch(otype.As<string>()) {
-                case "PiAlias":
-                  _viewType=ViewTypeEn.PiAlias;
-                  break;
-                case "PiLink":
-                  _viewType=ViewTypeEn.PiLink;
-                  break;
-                case "PiBlock":
-                  _viewType=ViewTypeEn.PiBlock;
-                  break;
-                default:
-                  _viewType=ViewTypeEn.Object;
-                  break;
-                }
-              } else {
-                _viewType=ViewTypeEn.Object;
-              }
-            }
-            break;
-          default:
-            _viewType=ViewTypeEn.Object;
-            break;
-          }
-        }
-        return _viewType;
-      }
-      set {
-        if(ViewTypeEn.Check(value)) {
-          _viewType=value;
-          this.RaisePropertyChanged("ViewType");
-        }
-      }
-    }
-    public MIm.BitmapImage Icon {
-      get {
-        MIm.BitmapImage ic;
-        string vt=ViewType;
-        if(vt==ViewTypeEn.PiBlock) {
-          JSObject func;
-          if(_value.Value!=null && (func=_value["func"]).IsDefinded) {
-            vt=func.As<string>();
-          }
-        }
-        if(!_icons.TryGetValue(vt, out ic)) {
-          ic=_icons[ViewTypeEn.Object];
-        }
-        return ic;
       }
     }
 
@@ -248,7 +227,7 @@ namespace X13.model {
         Properties=new ObservableCollection<PropertyM>();
         pr=true;
       }
-      Properties.Insert(0, new PropertyM(this, string.Empty));
+      Properties.Insert(0, new PropertyM(this, string.Empty, _client));
       if(!Expanded) {
         Expanded=true;
         exp=true;
@@ -320,7 +299,7 @@ namespace X13.model {
       bool propCh=false;
       PropertyM np=null;
       _value=value;
-      _viewType=null;
+      _declarer=null;
       if(_value!=null && _value.ValueType>=JSObjectType.Object) {
         var names=_value.ToArray();
         if(Properties==null) {
@@ -336,6 +315,16 @@ namespace X13.model {
         foreach(var n in names) {
           if(_parent is TopicM && n=="$type") {
             _oType=_value.GetMember("$type").As<string>();
+            if(_oType=="PiDeclarer") {
+              string dName;
+              if(_parent==null || _parent.Name=="PLC") {
+                dName=this.Name;
+              } else {
+                dName=_parent.Name+"/"+this.Name;
+              }
+              var d=_client.GetDecl(dName);
+              d.Populate(value);
+            }
           } else {
             for(i=Properties.Count-1; i>=0; i--) {
               j=string.Compare(Properties[i].Name, n);
@@ -350,7 +339,7 @@ namespace X13.model {
             }
             i++;
             if(i>=0) {
-              np=new PropertyM(this, n);
+              np=new PropertyM(this, n, _client);
               Properties.Insert(i, np);
             }
             np.SetValue(_value.GetMember(n));
@@ -379,27 +368,6 @@ namespace X13.model {
 
     public override string ToString() {
       return GetUri(null);
-    }
-  }
-  internal static class ViewTypeEn {
-    private static string[] _arr=new string[] { Bool, Int, Double, DateTime, String, PiLink, PiAlias, PiBlock, Object };
-    public const string Bool="bool";
-    public const string Int="int";
-    public const string Double="double";
-    public const string DateTime="DateTime";
-    public const string String="string";
-    public const string PiLink="PLC.Link";
-    public const string PiAlias="PLC.Alias";
-    public const string PiBlock="PLC.Block";
-    public const string Object="object";
-
-    public static bool Check(string vt) {
-      for(int i=0; i<_arr.Length; i++) {
-        if(vt==_arr[i]) {
-          return true;
-        }
-      }
-      return false;
     }
   }
 }

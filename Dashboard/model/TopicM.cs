@@ -22,15 +22,11 @@ namespace X13.model {
 
     private ObservableTopics _children;
     public int _subscribed;
-    public readonly WsClient _client;
 
-    private TopicM(TopicM parent, string name, WsClient cl=null)
-      : base(parent, name) {
+    private TopicM(TopicM parent, string name, WsClient cl)
+      : base(parent, name, cl) {
       if(parent==null) {
         IsRoot=true;
-        _client=cl;
-      } else {
-        _client=parent._client;
       }
     }
 
@@ -112,7 +108,7 @@ namespace X13.model {
     //public async Task<TopicM> GetAsync(string p, bool create=true) {
     //}
     public void AddChild() {
-      Children.Insert(0, new TopicM(this, string.Empty));
+      Children.Insert(0, new TopicM(this, string.Empty, _client));
     }
     public void Move(string npath, string nname) {
       TopicM np=this.Parent;
@@ -238,7 +234,7 @@ namespace X13.model {
           if(idx<0) {
             next=this[-1-idx];
           } else {
-            next=new TopicM(parent, name);
+            next=new TopicM(parent, name, parent._client);
             this.Insert(idx, next);
           }
         }

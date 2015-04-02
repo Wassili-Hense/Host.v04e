@@ -27,20 +27,19 @@
       <ItemsControl.ItemTemplate>
         <DataTemplate>
           <StackPanel Orientation="Horizontal" MouseLeftButtonUp="PathMouseLRBU" MouseRightButtonUp="PathMouseLRBU" >
-            <Border BorderThickness="1" Margin="0" Padding="1, 1, 4, 1" Cursor="Hand">
+            <Border BorderThickness="1" Padding="1, 1, 4, 1" Margin="0,2" Cursor="Hand">
               <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}" VerticalAlignment="Center"  />
               <Border.Style>
                 <Style TargetType="Border">
-                  <Setter Property="Background" Value="#40FFFFFF" />
-                  <Setter Property="BorderBrush" Value="#807F7F7F" />
+                  <Setter Property="Background" Value="#40E0E0E0" />
+                  <Setter Property="BorderBrush" Value="#40808080" />
                   <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsRoot}" Value="true">
+                      <Setter Property="Background" Value="#40A0B0FF" />
+                    </DataTrigger>
                     <Trigger Property="IsMouseOver" Value="True">
-                      <Setter Property="Background" Value="#80FFFFFF" />
                       <Setter Property="BorderBrush" Value="Black" />
                     </Trigger>
-                    <DataTrigger Binding="{Binding IsRoot}" Value="true">
-                      <Setter Property="Background" Value="#408090FF" />
-                    </DataTrigger>
                   </Style.Triggers>
                 </Style>
               </Border.Style>
@@ -219,7 +218,7 @@
                     </Style>
                   </TextBox.Style>
                 </TextBox>
-                <Image Grid.Column="2" Stretch="None" Source="{Binding Icon}" MouseUp="Image_MouseUp" />
+                <Image Grid.Column="2" Stretch="None" Source="{Binding Declarer.Icon}" MouseUp="Image_MouseUp" />
               </Grid>
             </DataTemplate>
           </GridViewColumn.CellTemplate>
@@ -242,7 +241,7 @@
               </Control>
 
               <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Bool}">
+                <DataTrigger Binding="{Binding Declarer.View}" Value="{x:Static mym:ViewTypeEn.Bool}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -339,7 +338,7 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Int}">
+                <DataTrigger Binding="{Binding Declarer.View}" Value="{x:Static mym:ViewTypeEn.Int}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -349,7 +348,7 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.Double}">
+                <DataTrigger Binding="{Binding Declarer.View}" Value="{x:Static mym:ViewTypeEn.Double}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -359,7 +358,7 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.DateTime}">
+                <DataTrigger Binding="{Binding Declarer.View}" Value="{x:Static mym:ViewTypeEn.DateTime}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">
@@ -369,7 +368,7 @@
                   </Setter>
                 </DataTrigger>
 
-                <DataTrigger Binding="{Binding ViewType}" Value="{x:Static mym:ViewTypeEn.String}">
+                <DataTrigger Binding="{Binding Declarer.View}" Value="{x:Static mym:ViewTypeEn.String}">
                   <Setter TargetName="ValueCellControl" Property="Template">
                     <Setter.Value>
                       <ControlTemplate TargetType="{x:Type Control}">

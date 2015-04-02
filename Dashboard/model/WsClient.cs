@@ -8,6 +8,7 @@ using System.Text;
 using X13.Server;
 using System.Threading.Tasks;
 using System.Threading;
+using MIm=System.Windows.Media.Imaging;
 
 namespace X13.model {
   internal class WsClient : IDisposable {
@@ -29,12 +30,25 @@ namespace X13.model {
     private long _subIdx;
     private Dictionary<long, string> _subscriptions;
     private ConcurrentDictionary<long, TaskCompletionSource<long>> _waitAcks;
+    private SortedList<string, DeclarerM> _declarers;
 
     private WsClient() {
       root=TopicM.CreateRoot(this);
       _subIdx=1;
       _subscriptions=new Dictionary<long, string>();
       _waitAcks=new ConcurrentDictionary<long, TaskCompletionSource<long>>();
+
+      _declarers=new SortedList<string, DeclarerM>();
+      _declarers[ViewTypeEn.Bool]     =new DeclarerM(ViewTypeEn.Bool) { View=ViewTypeEn.Bool, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_bool.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.Int]      =new DeclarerM(ViewTypeEn.Int) { View=ViewTypeEn.Int, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_i64.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.Double]   =new DeclarerM(ViewTypeEn.Double) { View=ViewTypeEn.Double, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_f02.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.DateTime] =new DeclarerM(ViewTypeEn.DateTime) { View=ViewTypeEn.DateTime, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_dt.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.String]   =new DeclarerM(ViewTypeEn.String) { View=ViewTypeEn.String, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_str.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.PiAlias]  =new DeclarerM(ViewTypeEn.PiAlias) { View=ViewTypeEn.Object, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_ref.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.PiLink]   =new DeclarerM(ViewTypeEn.PiLink) { View=ViewTypeEn.Object, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_wire.png", UriKind.Relative)) };
+      _declarers[ViewTypeEn.Object]   =new DeclarerM(ViewTypeEn.Object) { View=ViewTypeEn.Object, Icon=new MIm.BitmapImage(new Uri("/Dashboard;component/Images/ty_obj.png", UriKind.Relative)) };
+      //_declarers[]=new DeclarerM() { Name=, View=, Icon=
+
       _conn=WsServer.instance.Connect(RcvMsg);
     }
     public string Info { get { return "local"; } }
@@ -73,7 +87,7 @@ namespace X13.model {
         _waitAcks[sid]=tsk;
         _conn.RcvMsg("[32,"+sid.ToString()+","+JsEnc(mask)+"]");
       } else if(!_waitAcks.TryGetValue(sid, out tsk)) {
-          return null;
+        return null;
       }
       return tsk.Task;
     }
@@ -90,7 +104,7 @@ namespace X13.model {
       }
       long sid=0;
       lock(_subscriptions) {
-        var kv=_subscriptions.FirstOrDefault(z=>z.Value==path);
+        var kv=_subscriptions.FirstOrDefault(z => z.Value==path);
         if(kv.Value!=null) {
           sid=kv.Key;
         }
@@ -100,6 +114,15 @@ namespace X13.model {
       }
 
     }
+
+    public DeclarerM GetDecl(string name) {
+      DeclarerM d;
+      if(!_declarers.TryGetValue(name, out d)) {
+        d=_declarers[ViewTypeEn.Object];
+      }
+      return d;
+    }
+
 
     public void Dispose() {
       var c=_conn;

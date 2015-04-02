@@ -32,19 +32,13 @@ namespace X13.UI {
     }
 
     private void Window_Loaded(object sender, RoutedEventArgs e) {
-      string layoutS=null;
+      bool wait=false;
       try {
         if(!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(_cfgPath))) {
           System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(_cfgPath));
         } else if(System.IO.File.Exists(_cfgPath)) {
           var xd=new XmlDocument();
           xd.Load(_cfgPath);
-          //var conn=xd.SelectSingleNode("/Config/Url");
-          //if(conn!=null) {
-          //  _connectionUrl=conn.InnerText;
-          //} else {
-          //  _connectionUrl="ws://localhost:80/";
-          //}
           var window=xd.SelectSingleNode("/Config/Window");
           if(window!=null) {
             WindowState st;
@@ -67,23 +61,57 @@ namespace X13.UI {
           }
           var xlay=xd.SelectSingleNode("/Config/LayoutRoot");
           if(xlay!=null) {
-            layoutS=xlay.OuterXml;
+            BackgroundWorker bw=new BackgroundWorker();
+            var cl=WsClient.Get("local");  // ????????????
+            bw.DoWork+=bw_DoWork;
+            bw.ProgressChanged+=bw_ProgressChanged;
+            bw.RunWorkerCompleted+=bw_RunWorkerCompleted;
+            bw.WorkerReportsProgress=true;
+            bw.RunWorkerAsync(xlay);
+            wait=true;
           }
-        }
-        if(layoutS!=null) {
-          var layoutSerializer = new Xceed.Wpf.AvalonDock.Layout.Serialization.XmlLayoutSerializer(dockManager);
-          layoutSerializer.LayoutSerializationCallback+=layoutSerializer_LayoutSerializationCallback;
-          layoutSerializer.Deserialize(new System.IO.StringReader(layoutS));
         }
       }
       catch(Exception ex) {
         Log.Error("Load config - {0}", ex.Message);
       }
-      if(!Workspace.This.Files.Any()) {
-        Workspace.This.AddFile(WsClient.Get("local").root);
+      if(!wait) {
+        if(!Workspace.This.Files.Any()) {
+          Workspace.This.AddFile(WsClient.Get("local").root);
+        }
+        BusyIndicator.IsBusy=false;
       }
     }
 
+    private void bw_DoWork(object sender, DoWorkEventArgs e) {
+      var bg=sender as BackgroundWorker;
+      var xlay=e.Argument as XmlNode;
+      XmlAttribute cid_s;
+      Uri ur;
+      var urs=xlay.SelectNodes(".//LayoutDocument[@ContentId]");
+      int i=0;
+      foreach(XmlNode cid in urs) {
+        if((cid_s=cid.Attributes["ContentId"])!=null && Uri.TryCreate(cid_s.Value, UriKind.Absolute, out ur) && ur.Scheme=="x13") {
+          bg.ReportProgress((i++)*100/urs.Count, "Loading "+ur.Host+ur.AbsolutePath);
+          var cl=WsClient.Get(ur.Host);
+          var r=cl.root.Get(ur.AbsolutePath, false, true);
+          var ch=r.Children;
+        }
+      }
+      e.Result=xlay.OuterXml;
+    }
+    private void bw_ProgressChanged(object sender, ProgressChangedEventArgs e) {
+      BusyIndicator.BusyContent=e.UserState as string;
+    }
+    private void bw_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e) {
+      string layoutS=e.Result as string;
+      if(layoutS!=null) {
+        var layoutSerializer = new Xceed.Wpf.AvalonDock.Layout.Serialization.XmlLayoutSerializer(dockManager);
+        layoutSerializer.LayoutSerializationCallback+=layoutSerializer_LayoutSerializationCallback;
+        layoutSerializer.Deserialize(new System.IO.StringReader(layoutS));
+      }
+      BusyIndicator.IsBusy=false;
+    }
     private void layoutSerializer_LayoutSerializationCallback(object s, Xceed.Wpf.AvalonDock.Layout.Serialization.LayoutSerializationCallbackEventArgs e1) {
       if(!string.IsNullOrWhiteSpace(e1.Model.ContentId)) {
         var t=Workspace.This.Open(e1.Model.ContentId);
@@ -95,14 +123,15 @@ namespace X13.UI {
       }
     }
 
+    private void dockManager_DocumentClosed(object sender, Xceed.Wpf.AvalonDock.DocumentClosedEventArgs e) {
+      Workspace.This.CloseFile(e.Document.Content as TopicM);
+    }
     private void BlocksPanel_MLD(object sender, MouseButtonEventArgs e) {
 
     }
-
     private void BlocksPanel_MLU(object sender, MouseButtonEventArgs e) {
 
     }
-
     private void BlocksPanel_MM(object sender, MouseEventArgs e) {
 
     }
@@ -166,8 +195,5 @@ namespace X13.UI {
 
     }
 
-    private void dockManager_DocumentClosed(object sender, Xceed.Wpf.AvalonDock.DocumentClosedEventArgs e) {
-      Workspace.This.CloseFile(e.Document.Content as TopicM);
-    }
   }
 }

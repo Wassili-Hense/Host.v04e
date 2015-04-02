@@ -27,6 +27,11 @@ namespace X13.Server {
       //Topic.root.Get("/A/DateTime\nNow").Set(DateTime.Now);
       Topic.root.Get("/Hello").Set("World");
       Topic.root.Get("/A/Test/T0").Set(0);
+
+      Topic.root.Get("/etc/PLC/func/INC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A+1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/DEC").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A-1;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+      Topic.root.Get("/etc/PLC/func/MOD").SetJson("{\"$type\":\"PiDeclarer\",\"calc\":\"this.Q=this.A%this.B;\",\"pins\":{\"A\":{\"pos\":\"A\",\"mandatory\":true},\"B\":{\"pos\":\"B\",\"mandatory\":true},\"Q\":{\"pos\":\"a\",\"mandatory\":true}}}");
+
       _plcTick=new System.Threading.Timer(PlcTick, null, 50, 100);
     }
     public WsConnection Connect(Action<string> re) {

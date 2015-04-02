@@ -131,7 +131,7 @@ namespace X13.UI {
       if(mi!=null && !string.IsNullOrEmpty(cmd=mi.Tag as string) && (v=mi.DataContext as PropertyM)!=null) {
         switch(cmd[0]) {
         case '#':
-          v.ViewType=cmd.Substring(1);
+          v.Declarer=v._client.GetDecl(cmd.Substring(1));
           break;
         case 'A':
           v.AddProperty();
@@ -215,7 +215,7 @@ namespace X13.UI {
         mi1.Click+=ContextMenuClick;
         items.Add(mi1);
       } else {
-        if(v.ViewType==ViewTypeEn.Object) {
+        if(v.Declarer!=null && v.Declarer.View==ViewTypeEn.Object) {
           mi1=new MenuItem() { Header="Add property", Tag="A" };
           mi1.Click+=ContextMenuClick;
           items.Add(mi1);
